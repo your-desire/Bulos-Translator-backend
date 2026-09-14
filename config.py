@@ -64,6 +64,11 @@ class Settings(BaseSettings):
         default=["bul", "en", "tl"],
         description="List of supported language codes (bul=Bulos, en=English, tl=Tagalog)"
     )
+
+    # Fuzzy Matching Settings
+    fuzzy_match_enabled: bool = Field(default=True)
+    fuzzy_match_threshold: float = Field(default=0.80)
+    fuzzy_match_min_length: int = Field(default=3)
     
     class Config:
         env_file = ".env"
