@@ -3,13 +3,10 @@ import asyncio
 import json
 import re
 import unicodedata
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
 
-from googletrans import Translator
-from services.database import DatabaseManager
-from models.schemas import TranslationRequest, TranslationResponse
+from deep_translator import GoogleTranslator
 from config import settings
 from utils.logging_config import get_logger
 from utils.fuzzy_match import levenshtein_similarity
@@ -31,64 +28,132 @@ class TranslationService:
         ("tl", "en"),
     ]
     
-    def __init__(self, db_manager: DatabaseManager):
+    def __init__(self, db_manager: Optional[Any] = None):
         """
-        Initialize translation service
+        Initialize translation service.
         
         Args:
-            db_manager: Database manager instance for MongoDB operations
+            db_manager: Optional DatabaseManager instance for MongoDB operations.
+                       If None, TranslationService will use JSON files.
         """
-        self.db = db_manager
-        self.history_collection = "history"
-        
-        # Dictionary storage - will hold all translation data
-        self.phrase_index: Dict[str, List[Tuple[str, str, int]]] = {}  # phrase -> [(translation, lang_pair, word_count)]
-        
-        # Google Translator instance (for EN ↔ TL and fallback translations)
-        self.google_translator = Translator()
-        
-        # Translation timeout from config
+        self.phrase_index: Dict[str, List[Tuple[str, str, int]]] = {}
+        self.google_translator = None
         self.timeout = settings.translation_timeout_seconds
-        
+        self.db_manager = db_manager  # MongoDB connection (optional)
+
         logger.info(f"TranslationService initialized with timeout: {self.timeout}s")
         logger.info("Google Translate enabled for EN<->TL and Tagalog fallback")
+        if db_manager:
+            logger.info("DatabaseManager provided - MongoDB loading available")
     
     async def initialize(self) -> None:
         """
-        Load all translation data from JSON files
+        Load all translation data from MongoDB (primary) or JSON files (fallback)
+        
+        Data Source Priority (M3.2):
+        1. MongoDB Atlas (if DatabaseManager available and connection successful)
+        2. JSON files (fallback if MongoDB unavailable or fails)
+        
+        IMPORTANT: Never mixes partial MongoDB data with JSON data.
+        Runtime uses EITHER MongoDB OR JSON, never both.
         
         Loads:
-        - dictionary.json: Word-level translations (organized by categories)
-        - sentence.json: Sentence-level translations
-        - alphabet.json: Additional vocabulary from alphabet examples
+        - dictionary: Word-level translations (organized by categories)
+        - sentences: Sentence-level translations  
+        - alphabet: Additional vocabulary from alphabet examples
         """
         logger.info("Initializing translation service...")
+        
+        # ═══════════════════════════════════════════════════════════════
+        # ATTEMPT 1: Load from MongoDB (Primary Source)
+        # ═══════════════════════════════════════════════════════════════
+        if self.db_manager:
+            logger.info("DatabaseManager available - attempting MongoDB loading...")
+            
+            try:
+                # Load all linguistic data from MongoDB
+                logger.info("Loading linguistic data from MongoDB Atlas...")
+                
+                # Load dictionary data from MongoDB
+                dictionary_data = await self._load_dictionary_from_mongodb()
+                logger.info(f"✓ Loaded {len(dictionary_data)} word entries from MongoDB dictionary")
+                
+                # Load alphabet data from MongoDB
+                alphabet_data = await self._load_alphabet_from_mongodb()
+                logger.info(f"✓ Loaded {len(alphabet_data)} word entries from MongoDB alphabet")
+                
+                # Load sentence data from MongoDB
+                sentence_data = await self._load_sentences_from_mongodb()
+                logger.info(f"✓ Loaded {len(sentence_data)} sentence entries from MongoDB sentences")
+                
+                # Validate that required datasets loaded successfully
+                if len(dictionary_data) == 0:
+                    raise ValueError("MongoDB dictionary collection is empty - cannot initialize")
+                
+                # Combine all vocabulary sources
+                all_vocabulary = dictionary_data + alphabet_data
+                logger.info(f"✓ Total vocabulary entries from MongoDB: {len(all_vocabulary)}")
+                
+                # Build comprehensive lookup indexes using EXISTING architecture
+                # This preserves all translation behavior (phrase-based, dictionary-based, fuzzy)
+                self._build_translation_indexes(all_vocabulary, sentence_data)
+                
+                logger.info("=" * 80)
+                logger.info("✓ TranslationService initialized successfully from MongoDB Atlas")
+                logger.info(f"  Data source: MongoDB (PRIMARY)")
+                logger.info(f"  Dictionary entries: {len(dictionary_data)}")
+                logger.info(f"  Sentence entries: {len(sentence_data)}")
+                logger.info(f"  Alphabet entries: {len(alphabet_data)}")
+                logger.info(f"  Total vocabulary: {len(all_vocabulary)}")
+                logger.info(f"  Total indexed phrases: {sum(len(v) for v in self.phrase_index.values())}")
+                logger.info("=" * 80)
+                
+                return  # Success - using MongoDB data
+                
+            except Exception as mongo_error:
+                # MongoDB loading failed - log warning and fall back to JSON
+                logger.warning("=" * 80)
+                logger.warning(f"MongoDB loading failed: {str(mongo_error)}")
+                logger.warning("Falling back to JSON files for linguistic data...")
+                logger.warning("=" * 80)
+        
+        # ═══════════════════════════════════════════════════════════════
+        # ATTEMPT 2: Load from JSON Files (Fallback)
+        # ═══════════════════════════════════════════════════════════════
+        logger.info("Loading linguistic data from JSON files (fallback mode)...")
         
         try:
             # Load dictionary data (words organized by categories)
             dictionary_data = await self._load_dictionary_data()
-            logger.info(f"Loaded {len(dictionary_data)} word entries from dictionary")
+            logger.info(f"✓ Loaded {len(dictionary_data)} word entries from dictionary.json")
             
             # Load alphabet data (additional vocabulary from examples)
             alphabet_data = await self._load_alphabet_data()
-            logger.info(f"Loaded {len(alphabet_data)} word entries from alphabet")
+            logger.info(f"✓ Loaded {len(alphabet_data)} word entries from alphabet.json")
             
             # Load sentence data
             sentence_data = await self._load_sentence_data()
-            logger.info(f"Loaded {len(sentence_data)} sentence entries")
+            logger.info(f"✓ Loaded {len(sentence_data)} sentence entries from sentence.json")
             
             # Combine all vocabulary sources
             all_vocabulary = dictionary_data + alphabet_data
-            logger.info(f"Total vocabulary entries: {len(all_vocabulary)}")
+            logger.info(f"✓ Total vocabulary entries from JSON: {len(all_vocabulary)}")
             
             # Build comprehensive lookup indexes
             self._build_translation_indexes(all_vocabulary, sentence_data)
             
-            logger.info("Translation service initialized successfully")
-            logger.info(f"Total indexed phrases: {sum(len(v) for v in self.phrase_index.values())}")
+            logger.info("=" * 80)
+            logger.info("✓ TranslationService initialized successfully from JSON files")
+            logger.info(f"  Data source: JSON (FALLBACK)")
+            logger.info(f"  Dictionary entries: {len(dictionary_data)}")
+            logger.info(f"  Sentence entries: {len(sentence_data)}")
+            logger.info(f"  Alphabet entries: {len(alphabet_data)}")
+            logger.info(f"  Total vocabulary: {len(all_vocabulary)}")
+            logger.info(f"  Total indexed phrases: {sum(len(v) for v in self.phrase_index.values())}")
+            logger.info("=" * 80)
             
         except Exception as e:
-            logger.error(f"Failed to initialize translation service: {str(e)}", exc_info=True)
+            logger.error(f"Failed to initialize translation service from JSON files: {str(e)}", exc_info=True)
             raise
     
     async def _load_dictionary_data(self) -> List[Dict[str, str]]:
@@ -183,6 +248,193 @@ class TranslationService:
         logger.info(f"Extracted {len(entries)} unique vocabulary entries from alphabet")
         return entries
     
+    async def _load_dictionary_from_mongodb(self) -> List[Dict[str, str]]:
+        """
+        Load dictionary data from MongoDB dictionary collection (M3.1)
+        
+        READ-ONLY operation. Queries all documents from the dictionary collection
+        and converts them to the internal format expected by _build_translation_indexes().
+        
+        Returns:
+            List of dictionaries with 'bul', 'tl', and 'en' translations
+            
+        Raises:
+            RuntimeError: If DatabaseManager not initialized
+            Exception: If MongoDB query fails
+        """
+        if not self.db_manager:
+            raise RuntimeError("DatabaseManager not initialized - cannot load from MongoDB")
+        
+        entries = []
+        
+        try:
+            # Query all documents from dictionary collection
+            # No limit needed - fetch all entries
+            docs = await self.db_manager.find_many(
+                collection="dictionary",
+                query={},
+                limit=10000  # High limit to ensure we get all entries
+            )
+            
+            logger.info(f"Retrieved {len(docs)} documents from MongoDB dictionary collection")
+            
+            for doc in docs:
+                bulos = doc.get("bulos", "").strip()
+                filipino = doc.get("filipino", "").strip()
+                english = doc.get("english", "").strip()
+                
+                # Skip entries with missing translations or placeholder values
+                # Same validation as JSON loading
+                if bulos and filipino and english and bulos != "—":
+                    entries.append({
+                        "bul": bulos,
+                        "tl": filipino,
+                        "en": english
+                    })
+            
+            logger.info(f"Loaded {len(entries)} valid dictionary entries from MongoDB")
+            logger.debug(f"Sample entry: {entries[0] if entries else 'None'}")
+            
+        except Exception as e:
+            logger.error(f"Failed to load dictionary from MongoDB: {str(e)}", exc_info=True)
+            raise
+        
+        return entries
+    
+    async def _load_sentences_from_mongodb(self) -> List[Dict[str, str]]:
+        """
+        Load sentence data from MongoDB sentences collection (M3.1)
+        
+        READ-ONLY operation. Queries all documents from the sentences collection
+        and converts them to the internal format expected by _build_translation_indexes().
+        
+        Note: Unlike JSON loading, we assume MongoDB data is pre-validated.
+        No sentence validation is performed here.
+        
+        Returns:
+            List of dictionaries with 'bul', 'tl', and 'en' translations
+            
+        Raises:
+            RuntimeError: If DatabaseManager not initialized
+            Exception: If MongoDB query fails
+        """
+        if not self.db_manager:
+            raise RuntimeError("DatabaseManager not initialized - cannot load from MongoDB")
+        
+        entries = []
+        
+        try:
+            # Query all documents from sentences collection
+            docs = await self.db_manager.find_many(
+                collection="sentences",
+                query={},
+                limit=1000  # Sentences typically fewer than dictionary
+            )
+            
+            logger.info(f"Retrieved {len(docs)} documents from MongoDB sentences collection")
+            
+            for doc in docs:
+                bulos = doc.get("bulos", "").strip()
+                filipino = doc.get("filipino", "").strip()
+                english = doc.get("english", "").strip()
+                
+                # No validation - assume MongoDB data is pre-validated
+                if bulos and filipino and english:
+                    entries.append({
+                        "bul": bulos,
+                        "tl": filipino,
+                        "en": english
+                    })
+            
+            logger.info(f"Loaded {len(entries)} sentence entries from MongoDB")
+            
+        except Exception as e:
+            logger.error(f"Failed to load sentences from MongoDB: {str(e)}", exc_info=True)
+            raise
+        
+        return entries
+    
+    async def _load_alphabet_from_mongodb(self) -> List[Dict[str, str]]:
+        """
+        Load and flatten alphabet data from MongoDB alphabet collection (M3.1)
+        
+        READ-ONLY operation. Queries alphabet documents with nested structure
+        and flattens all vocabulary examples from:
+        letter -> examples -> {initial, middle, final} -> entries
+        
+        The flattening process:
+        1. Fetch all letter documents from MongoDB
+        2. For each letter, iterate through positions (initial, middle, final)
+        3. Extract all entries from each position
+        4. Convert to internal format and deduplicate
+        
+        Returns:
+            List of dictionaries with 'bul', 'tl', and 'en' translations
+            
+        Raises:
+            RuntimeError: If DatabaseManager not initialized
+            Exception: If MongoDB query fails
+        """
+        if not self.db_manager:
+            raise RuntimeError("DatabaseManager not initialized - cannot load from MongoDB")
+        
+        entries = []
+        seen = set()  # Track unique entries to avoid duplicates
+        
+        try:
+            # Query all letter documents from alphabet collection
+            letter_docs = await self.db_manager.find_many(
+                collection="alphabet",
+                query={},
+                limit=100  # All letters (typically ~20-30)
+            )
+            
+            logger.info(f"Retrieved {len(letter_docs)} letter documents from MongoDB alphabet collection")
+            
+            for letter_doc in letter_docs:
+                examples = letter_doc.get("examples", {})
+                
+                # Process all position types: initial, middle, final
+                for position in ["initial", "middle", "final"]:
+                    position_examples = examples.get(position, [])
+                    
+                    for entry in position_examples:
+                        # Handle both lowercase and uppercase field names
+                        bulos = entry.get("bulos", entry.get("BULOS", ""))
+                        filipino = entry.get("filipino", entry.get("FILIPINO", ""))
+                        english = entry.get("english", entry.get("ENGLISH", ""))
+                        
+                        # Strip whitespace
+                        bulos = bulos.strip() if bulos else ""
+                        filipino = filipino.strip() if filipino else ""
+                        english = english.strip() if english else ""
+                        
+                        # Create unique key to avoid duplicates
+                        unique_key = f"{bulos.lower()}|{filipino.lower()}|{english.lower()}"
+                        
+                        # Skip if already seen, missing data, or placeholder
+                        if unique_key in seen:
+                            continue
+                        if not (bulos and filipino and english):
+                            continue
+                        if bulos == "—" or filipino == "—":
+                            continue
+                        
+                        entries.append({
+                            "bul": bulos,
+                            "tl": filipino,
+                            "en": english
+                        })
+                        seen.add(unique_key)
+            
+            logger.info(f"Loaded {len(entries)} unique alphabet entries from MongoDB (flattened from nested structure)")
+            
+        except Exception as e:
+            logger.error(f"Failed to load alphabet from MongoDB: {str(e)}", exc_info=True)
+            raise
+        
+        return entries
+    
     async def _load_sentence_data(self) -> List[Dict[str, str]]:
         """
         Load and parse sentence.json to extract sentence-level translations
@@ -261,31 +513,36 @@ class TranslationService:
     
     def _normalize_text(self, text: str) -> str:
         """
-        Normalize text for lookup with Unicode normalization
+        Normalize text for lookup.
         
         Handles:
-        - Unicode normalization (Ã, Ã±, accents)
+        - Diacritic/accent stripping (NFD decomposition + combining-mark removal)
+          so that "ulù", "ulu", and "ULÙ" all produce the same key.
+          This is essential for Bulos words which carry grave/acute accents in
+          the source data but are often typed without them by users.
         - Lowercase conversion
         - Whitespace normalization
-        - Punctuation removal
+        - Trailing punctuation removal
         
         Args:
             text: Text to normalize
             
         Returns:
-            Normalized text (lowercase, trimmed, no duplicate spaces, normalized unicode)
+            Normalized text (lowercase, accent-free, trimmed, no duplicate spaces)
         """
-        # Normalize Unicode characters (NFC = composed form)
-        # This handles Ã → o, Ã± → ñ, etc.
-        normalized = unicodedata.normalize('NFC', text)
+        # Decompose to NFD so each accented character becomes base + combining mark,
+        # then discard all combining marks (Unicode category "Mn").
+        # e.g. "ulù" (U+00F9) → "u" "l" U+0075 U+0300 → "ulu"
+        normalized = unicodedata.normalize('NFD', text)
+        normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
         
         # Convert to lowercase
         normalized = normalized.lower()
         
-        # Trim spaces
+        # Trim surrounding whitespace
         normalized = normalized.strip()
         
-        # Remove duplicate spaces
+        # Collapse internal whitespace
         normalized = re.sub(r'\s+', ' ', normalized)
         
         # Remove trailing punctuation for lookup (but preserve original for response)
@@ -431,12 +688,16 @@ class TranslationService:
             src = lang_map.get(source_lang, source_lang)
             dest = lang_map.get(target_lang, target_lang)
             
-            # googletrans 4.x translate() is async, call it directly
-            result = await self.google_translator.translate(text, src=src, dest=dest)
+            # deep-translator.GoogleTranslator is synchronous; run in executor
+            loop = asyncio.get_event_loop()
+            translated = await loop.run_in_executor(
+                None,
+                lambda: GoogleTranslator(source=src, target=dest).translate(text)
+            )
             
-            if result and hasattr(result, 'text') and result.text:
-                logger.debug(f"Google Translate: '{text}' ({source_lang}→{target_lang}) = '{result.text}'")
-                return result.text
+            if translated:
+                logger.debug(f"Google Translate: '{text}' ({source_lang}→{target_lang}) = '{translated}'")
+                return translated
             else:
                 logger.warning(f"Google Translate returned empty result for: '{text}'")
                 return None
@@ -552,8 +813,11 @@ class TranslationService:
         Returns:
             Translated word (Bulos if in dictionary, else Tagalog fallback)
         """
-        # For non-Bulos targets, return original (shouldn't reach here)
+        # This fallback only applies when the target is Bulos, since Bulos words
+        # may be missing from the dictionary — for other targets the greedy
+        # matcher already handles everything and this path should not be reached.
         if target_lang != 'bul':
+            logger.debug(f"_translate_word_with_fallback called for non-Bulos target '{target_lang}', returning original")
             return word
         
         # For EN→BUL: translate to Tagalog as fallback
@@ -663,8 +927,10 @@ class TranslationService:
             if not tagalog_text:
                 logger.warning(f"Google Translate EN→TL failed, using original text")
                 tagalog_text = text
+                intermediate_language = None
             else:
                 logger.info(f"Step 1 (EN→TL): '{text}' → '{tagalog_text}'")
+                intermediate_language = 'tl'
             
             # Step 2: Translate TL → BUL using dictionary (with Tagalog preservation)
             # Recursively call with TL→BUL
@@ -672,6 +938,7 @@ class TranslationService:
             
             # Update method to indicate 2-step process
             result['translation_method'] = 'google_then_dictionary'
+            result['intermediate_language'] = intermediate_language
             logger.info(f"Step 2 (TL→BUL): '{tagalog_text}' → '{result['translated_text']}'")
             
             return result
@@ -685,22 +952,39 @@ class TranslationService:
             # Step 1: Translate BUL → TL using dictionary
             result = await self._translate_text(text, 'bul', 'tl')
             tagalog_text = result['translated_text']
+            bul_to_tl_confidence = result['confidence']
             
-            logger.info(f"Step 1 (BUL→TL): '{text}' → '{tagalog_text}'")
+            logger.info(f"Step 1 (BUL→TL): '{text}' → '{tagalog_text}' (confidence: {bul_to_tl_confidence:.2f})")
             
             # Step 2: Translate TL → EN using Google
-            english_text = await self._translate_with_google(tagalog_text, 'tl', 'en')
-            
-            if not english_text:
-                logger.warning(f"Google Translate TL→EN failed, using intermediate Tagalog")
+            # SAFETY CHECK: Only send to Google if ALL Bulos words were successfully translated
+            # If confidence < 1.0, the output contains unmatched Bulos words that should NOT
+            # be treated as Tagalog by Google Translate.
+            if bul_to_tl_confidence < 1.0:
+                logger.warning(
+                    f"BUL→TL partial match (confidence={bul_to_tl_confidence:.2f}). "
+                    f"Not sending to Google to avoid misinterpreting unmatched Bulos words as Tagalog."
+                )
+                # Preserve the intermediate result (mixed Bulos+Tagalog)
                 english_text = tagalog_text
+                intermediate_language = 'tl'  # Signal partial result
             else:
-                logger.info(f"Step 2 (TL→EN): '{tagalog_text}' → '{english_text}'")
+                # confidence == 1.0: All words matched, safe to send to Google
+                english_text = await self._translate_with_google(tagalog_text, 'tl', 'en')
+                
+                if not english_text:
+                    logger.warning(f"Google Translate TL→EN failed, using intermediate Tagalog")
+                    english_text = tagalog_text
+                    intermediate_language = 'tl'  # Stuck at Tagalog
+                else:
+                    logger.info(f"Step 2 (TL→EN): '{tagalog_text}' → '{english_text}'")
+                    intermediate_language = None
             
             return {
                 "translated_text": english_text,
-                "confidence": result['confidence'],  # Use dictionary confidence
-                "translation_method": "dictionary_then_google"
+                "confidence": bul_to_tl_confidence,  # Use dictionary confidence
+                "translation_method": "dictionary_then_google",
+                "intermediate_language": intermediate_language
             }
         
         # ═══════════════════════════════════════════════════════════════
@@ -721,8 +1005,9 @@ class TranslationService:
                     }
         
         # No exact match - use greedy multi-word matching
-        words = text.split()  # Original words (preserve case/punctuation)
-        words_norm = text_norm.split()  # Normalized for lookup
+        words = text.split()  # Original words (preserve case/punctuation for output)
+        # Strip punctuation from each token individually so that e.g. "mata," matches "mata"
+        words_norm = [w.strip('.!?,;:') for w in text_norm.split()]
         
         if len(words_norm) == 0:
             return {
@@ -824,46 +1109,34 @@ class TranslationService:
         user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Translate text from source to target language
-        
-        Uses comprehensive dictionary-based approach with verified JSON data
-        
+        Translate text from source to target language.
+
         Args:
             text: Text to translate
             source_language: Source language code (en, tl, or bul)
             target_language: Target language code (en, tl, or bul)
-            user_id: Optional user ID for history tracking
-            
+            user_id: Ignored - retained for API compatibility only
+
         Returns:
-            Dictionary with translation result including:
-            - original_text
-            - translated_text
-            - source_language
-            - target_language
-            - confidence (0.0-1.0 based on actual dictionary coverage)
-            
+            Dictionary with original_text, translated_text, source_language,
+            target_language, confidence, translation_method, intermediate_language.
+
         Raises:
             ValueError: If language pair is not supported
             asyncio.TimeoutError: If translation exceeds timeout
         """
         logger.info(f"Translation request: '{text}' ({source_language}->{target_language})")
-        
-        # Validate that source_language is one of our supported languages
+
         if source_language not in ['en', 'tl', 'bul']:
-            logger.error(f"Invalid source_language: {source_language}")
             raise ValueError(f"Invalid source_language: {source_language}. Must be one of: en, tl, bul")
-        
-        # Validate language pair
+
         if (source_language, target_language) not in self.SUPPORTED_PAIRS:
-            logger.warning(f"Unsupported language pair: {source_language}->{target_language}")
             raise ValueError(
                 f"Unsupported language pair: {source_language} -> {target_language}. "
                 f"Supported pairs: {self.SUPPORTED_PAIRS}"
             )
-        
-        # Check if source and target are the same
+
         if source_language == target_language:
-            logger.info(f"No translation needed: source={source_language}, target={target_language}")
             return {
                 "original_text": text,
                 "translated_text": text,
@@ -871,107 +1144,29 @@ class TranslationService:
                 "target_language": target_language,
                 "confidence": 1.0
             }
-        
+
         try:
-            # Run translation with timeout
             result = await asyncio.wait_for(
                 self._translate_text(text, source_language, target_language),
                 timeout=self.timeout
             )
-            
-            # Record in history if user_id provided
-            if user_id:
-                await self._record_history(
-                    user_id=user_id,
-                    action_type="translation",
-                    outcome="success",
-                    details={
-                        "source_language": source_language,
-                        "target_language": target_language,
-                        "original_text": text,
-                        "translated_text": result["translated_text"],
-                        "confidence": result["confidence"]
-                    }
-                )
-            
+
             logger.info(f"Translation completed: '{result['translated_text']}'")
-            
+
             return {
                 "original_text": text,
                 "translated_text": result["translated_text"],
                 "source_language": source_language,
                 "target_language": target_language,
                 "confidence": result["confidence"],
-                "translation_method": result.get("translation_method", "unknown")
+                "translation_method": result.get("translation_method", "unknown"),
+                "intermediate_language": result.get("intermediate_language")
             }
-            
+
         except asyncio.TimeoutError:
             logger.error(f"Translation timeout ({self.timeout}s) exceeded for: {text}")
-            
-            # Record failure in history
-            if user_id:
-                await self._record_history(
-                    user_id=user_id,
-                    action_type="translation",
-                    outcome="timeout",
-                    details={
-                        "source_language": source_language,
-                        "target_language": target_language,
-                        "original_text": text,
-                        "error": "Translation timeout"
-                    }
-                )
-            
             raise asyncio.TimeoutError(f"Translation exceeded timeout of {self.timeout} seconds")
-            
+
         except Exception as e:
             logger.error(f"Translation failed: {str(e)}", exc_info=True)
-            
-            # Record failure in history
-            if user_id:
-                await self._record_history(
-                    user_id=user_id,
-                    action_type="translation",
-                    outcome="error",
-                    details={
-                        "source_language": source_language,
-                        "target_language": target_language,
-                        "original_text": text,
-                        "error": str(e)
-                    }
-                )
-            
             raise
-    
-    async def _record_history(
-        self,
-        user_id: str,
-        action_type: str,
-        outcome: str,
-        details: Optional[Dict[str, Any]] = None
-    ) -> None:
-        """
-        Record translation action in history collection
-        
-        Args:
-            user_id: User ID performing the action
-            action_type: Type of action (translation)
-            outcome: Outcome of the action (success, timeout, error)
-            details: Additional details about the action
-        """
-        try:
-            history_record = {
-                "user_id": user_id,
-                "action_type": action_type,
-                "resource_type": "translation",
-                "outcome": outcome,
-                "timestamp": datetime.utcnow(),
-                "details": details or {}
-            }
-            
-            await self.db.insert_one(self.history_collection, history_record)
-            logger.debug(f"History recorded: {action_type} for user {user_id}")
-            
-        except Exception as e:
-            # Don't fail the main operation if history recording fails
-            logger.error(f"Failed to record history: {str(e)}", exc_info=True)

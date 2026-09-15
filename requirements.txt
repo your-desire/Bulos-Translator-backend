@@ -58,3 +58,8 @@ python-cors==1.0.0
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
+
+# MongoDB
+motor==3.3.2
+pymongo==4.6.1
+certifi==2023.11.17
