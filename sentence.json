@@ -1,3 +1,1003 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "BULOS": "Ikitam ay Magsolat",
+      "FILIPINO": "Magbasa at Sumulat Tayo",
+      "ENGLISH": "Let us Read and Write"
+    },
+    {
+      "BULOS": "Panuntonan de Pagsolat ni Surot a Dumaget Bulos",
+      "FILIPINO": "Gabay sa Pagtuturo ng Wikang Dumaget Bulos",
+      "ENGLISH": "A Guide to Teaching the Dumaget Bulos Language"
+    },
+    {
+      "BULOS": "I Pamamaraan ni Pagsolat ni Surot a Dumaget Bulos",
+      "FILIPINO": "Ang Pamamaraan ng Pagsulat sa Wikang Dumaget Bulos",
+      "ENGLISH": "Introduction to Dumaget Bulos Orthography"
+    },
+    {
+      "BULOS": "I Surot a Dumaget Bulos ay te dalawampu't tiluwan (23) a tinog. Io ay te anim (6) a patenig at labing-pitu a katenig kabilang di i mga impit a tinog (glottal stop).",
+      "FILIPINO": "Ang Wikang Dumaget Bulos ay may dalawampu't tatlong tunog. Ito ay may anim (6) na patinig at labing-pitong (17) katinig na ang mga impit na tunog (glottal stop).",
+      "ENGLISH": "There are twenty-three (23) sounds in the Dumaget Bulos Language. Six (6) of these are vowels and seventeen (17) are consonants including the glottal stop."
+    },
+    {
+      "BULOS": "I gebigkas de mga patenig a Surot a Dumaget Bulos ay tolad di de gebigkas de mga patenig a alpabetu a Pilipenu maleben de tetik e a gekaduman ni kaduwa a tinog",
+      "FILIPINO": "Ang pagbigkas sa mga patinig ng Wikang Bulos ay tulad din sa pagbigkas sa mga patinig ng alpabetong Filipino maliban sa titik e na nagkakaroon ng ikalawang tunog.",
+      "ENGLISH": "All the vowels have the same sounds as those vowels in the Filipino alphabet except for vowel e which has second sound when it follows to letters b, d and g"
+    },
+    {
+      "BULOS": "I kaaduwa a timog ni tetik e ay nalilikha de tipide a mga surot bege io ay geabut de mga tetik b, d at g. Io ay gekaduman ni tinog a malapatenig y de unahan a mage alon kung kaya't pesolat a ē",
+      "FILIPINO": "Ang ikalawang tunog ng titik e ay nililikha sa ilang mga salita kapag ito ay sumusunod sa mga titik b, d, at g. Ito ay nagkakaroon ng tunog na malapatinig y sa unahan na parang alon kung kaya't isusulat ng ē",
+      "ENGLISH": "The second sound of letter e is produced when it follows to letters b, d and g. Thus, it is written as Ēē"
+    },
+    {
+      "BULOS": "Pesan a katenig de Surot Dumaget Bulos ay pebigkas tolad a mga katenig de alpabetu a Pilipenu",
+      "FILIPINO": "Lahat ng katinig sa Wikang Dumaget Bulos ay binibigkas tulad ng mga katinig sa alpabetong Filipino",
+      "ENGLISH": "All consonants in the Dumaget Bulos alphabet have the same sounds as those letters in the Filipino alphabet."
+    },
+    {
+      "BULOS": "Tuntonin de Tama a Pagsolat de Surot a Dumaget Bulos",
+      "FILIPINO": "Tuntunin sa Tamang Paraan ng Pagsulat sa Wikang Dumaget Bulos",
+      "ENGLISH": "Spelling Rules"
+    },
+    {
+      "BULOS": "Tuntonin",
+      "FILIPINO": "Tuntunin",
+      "ENGLISH": "Rule"
+    },
+    {
+      "BULOS": "I impit a tinog o glottal stop",
+      "FILIPINO": "Ang impit na tunog o glottal stop",
+      "ENGLISH": "Glottal Stop"
+    },
+    {
+      "BULOS": "I glottal stop de pag-etan ni aduwa a patinig ay eyen di pesulat",
+      "FILIPINO": "Ang glottal stop na nasa pagitan ng dalawang patinig ay hindi sinusulat",
+      "ENGLISH": "Glottal stop in between two vowels has no symbol"
+    },
+    {
+      "BULOS": "I glottal stop a de pag-etan ni surot ay pesolat a gitling (-)",
+      "FILIPINO": "Ang glottal stop na nasa gitna ng salita ay isinusulat na gitling (-)",
+      "ENGLISH": "Glottal stop that is found iin the middle of a word, between consonant and vowel is represented by hyphen (-)"
+    },
+    {
+      "BULOS": "I glottal stop a de inapoan ni surot ay pesulat a (')",
+      "FILIPINO": "Ang glottal stop na nasa hulihan ng salita ay isinusulat na (')",
+      "ENGLISH": "Words with glottal stop at the end of the word have is presented by this mark (')"
+    },
+    {
+      "BULOS": "I tinog ni tetik e",
+      "FILIPINO": "Ang tunog ng titik e",
+      "ENGLISH": "The sounds of e"
+    },
+    {
+      "BULOS": "I tetik e de Surot a Dumaget Bulos ay te aduwa a tinug. I ona a tinug ay parehu de tinug ni e de alpabetu a Pilipenu",
+      "FILIPINO": "Ang titik e sa Wikang Dumagat Bulos ay may dalawang tunog. Ang unang tunog ay katulad sa tunog ng titik e sa alpabetong Filipino",
+      "ENGLISH": "Letter e has two sounds. The first sound is the same with the sound of letter e in Filipino alphabet."
+    },
+    {
+      "BULOS": "I kaduwa a tinug ni e ay mage malapatenig a y de unahan bege abut de katenig a b, d pati g. lo ay pesolat ni ě",
+      "FILIPINO": "Ang ikalawang tunog ng titik e ay nalilikha sa ilang mga salita kapag ito ay sumusunod sa mga titik b, d, at g. Ito ay nagkakaroon ng tunog na malapatinig y sa unahan na parang alon kung kaya't isusulat ng ě",
+      "ENGLISH": "Some words produce the second sound of e which has semi-vowel sound of y when it follows to consonants b, d and g. This is represented as ě."
+    },
+    {
+      "BULOS": "I mga gemit a i at e",
+      "FILIPINO": "Ang mga gamit ng mga titik i at e",
+      "ENGLISH": "Uses of letters i and e"
+    },
+    {
+      "BULOS": "l i a pebigkas a e de mga surot a eyen nagkobowon i kahulogen ay pesolat a i",
+      "FILIPINO": "Sa mga salitang ang i ay nabibigkas na e na hindi nababago ang kahulugan. Isusulat ito sa i",
+      "ENGLISH": "In words that i and e are used/pronounced interchangeably and do not change the meaning will be written with letter i"
+    },
+    {
+      "BULOS": "Eyen nappatud a gemitin i e de i oi i de e be nobowon mababago i kahulogen ni surot",
+      "FILIPINO": "Hindi maaring gamitin ang e sa i o ang i sa e kung mababago ang kahulugan ng salita",
+      "ENGLISH": "Letters i and e cannot be used interchangeably in words that would mean different meaning"
+    },
+    {
+      "BULOS": "I a pebigkas a u de mga surot a eyen nagkobowon i kahulogen ay pesolat a u",
+      "FILIPINO": "Sa mga salitang ang u ay nabibigkas na o na hindi nababago ang kahulugan, Isusulat ito sa u",
+      "ENGLISH": "In words that u is pronounced as o and do not change the meaning of the word will be written with letter u"
+    },
+    {
+      "BULOS": "I tetik o ay pepalitan ni u de mga idem a surot a umapu de Tagelog",
+      "FILIPINO": "Sa mga hiram na salita, ang titik o ay pinapalitan ng u",
+      "ENGLISH": "Letter o is replaced by u in borrowed words from Tagalog language"
+    },
+    {
+      "BULOS": "Gemit ni mga tetik o ki tetik u",
+      "FILIPINO": "Mga gamit ng mga titik o at u",
+      "ENGLISH": "Uses of letters o and u"
+    },
+    {
+      "BULOS": "I kambal-katenig",
+      "FILIPINO": "Ang kambal-katinig",
+      "ENGLISH": "Consonant Cluster"
+    },
+    {
+      "BULOS": "Te mga surot a te kambel-katenig a magkamokha a tetik at pebigkas de magkahiwalay a pantig",
+      "FILIPINO": "May mga salitang may kambal-katinig na magkamukhang litik at binibigkas sa magkahiwalay na pantig",
+      "ENGLISH": "There are words with consonant cluster of the same letter that are pronounced in separate syllables"
+    },
+    {
+      "BULOS": "Te mga surot a te kambel-katenig a magkabukod a tetik a pebigkas de eisin a panti",
+      "FILIPINO": "May mga salita na may kambal-katinig na magka-ibang titik at binibigkas sa lisang pantig",
+      "ENGLISH": "There are words with consonant cluster of different letters that are pronounced in the same syllable"
+    },
+    {
+      "BULOS": "De mga idem a surot mula de surot a Tagelog a te kambel-katenig. ambel-katenig, pebukod i kambel-katenig de pamamag-etan ni pagdugeng ni patenig de pag-etan nio",
+      "FILIPINO": "Sa mga hiram na salita mula sa Wikang Tagalog na may kambal-katinig, pinaghihiwalay ang kambal-katinig sa pamamagitan ng pagdaragdag ng patinig sa pagitan nito",
+      "ENGLISH": "Borrowed words from Tagalog with consonant cluster is separated into two syllables when written in Bulos language"
+    },
+    {
+      "BULOS": "I mga idem a surot",
+      "FILIPINO": "Ang mga hiram na salita",
+      "ENGLISH": "Borrowed Words"
+    },
+    {
+      "BULOS": "Dë katenig a madelang a gemetin de Surot a Dumaget Bulos, gegemit a mag simbolo a pegemit de Pilipenu ki English tolad ni c, f, j, ñ, q, v, x, z de pagbeybey ni mga idem a surot",
+      "FILIPINO": "Sa mga katinig na madalang gamitin sa Wikang Dumaget Bulos, gagamitin ang mga simbolong ginagamit sa Filipino and English gaya ng c, f, j, ñ, q, v, x, z sa pagbaybay ng mga hiram na salita",
+      "ENGLISH": "For consonants that are seldom used in Dumaget Bulos language, the symbols used in Filipino and English will be used such as c, f, j, ñ, q, v, x, z in spelling of borrowed words"
+    },
+    {
+      "BULOS": "Eyen di bobowon o pepalitan be i sosolat ay tangi a ngalan ni kaagtaan ki lugel",
+      "FILIPINO": "Hindi na babaguhin o papalitan kung ang sinusulat ay tanging pangalan ng mga tao at lugar",
+      "ENGLISH": "Spelling of borrowed words used in proper names of persons and places are not changed"
+    },
+    {
+      "BULOS": "De mga surot a pegemit de buwon a kagemitan tolad ni laptop, xerox, chemotherapy, CT scan at kahalentolad nio ide, eyen pepalitan o pebowon i rupa de pagsolat ni mga io",
+      "FILIPINO": "Para sa mga salita o terminolohiyang ginagamit sa mga bagong kagamitan tulad ng laptop, xerox, chemotherapy, CT scan at kahalintulad ng mga ito, hindi pinapalitan o binabago ang anyo sa pagsusulat ng mga ito",
+      "ENGLISH": "Spelling of borrowed words or terminologies used in newly developed materials/gadgets like cellphone, laptop, xerox, chemotherapy, CT scan and others will not be changed in writing"
+    },
+    {
+      "BULOS": "De pagsolat ni ngalan ni adow ke bolan, pegemit e pamamaraan ni pagbeybey ni Surot a Dumaget Bulos",
+      "FILIPINO": "Sa pagsusulat ng pangngalan ng araw at buwan, ginagamit ang pamamaraan ng pagbaybay sa wikang Dumaget Bulos",
+      "ENGLISH": "Names of days and months are spelled following the rules in Dumaget Bulos"
+    },
+    {
+      "BULOS": "I mga surot a idem de Pilipenu ke English a ugnay di a pegemit ni Surot a Dumaget Bulos ay pesulat de pamamaraan ni Dumaget Bulos",
+      "FILIPINO": "Ang mga salitang hiram sa Filipino at English na palagian nang ginagamit ng Mga Dumaget Bulos ay isusulat sa pamamaraang Dumaget Bulos",
+      "ENGLISH": "Most of the borrowed words from English and Filipino that are frequently used in Dumaget Bulos are spelled following the rules in Dumaget Bulos writing"
+    },
+    {
+      "BULOS": "I mga panande de pagsolat",
+      "FILIPINO": "Ang mga pananda sa pagsusulat",
+      "ENGLISH": "Common Punctuations"
+    },
+    {
+      "BULOS": "I panande a pegemit ni Dumaget Bulos ay tolad pala ni Pilipenu ki English",
+      "FILIPINO": "Ang mga pananda na ginagamit sa Wikang Dumaget Bulos ay katulad din ng sa Pilipenu at English",
+      "ENGLISH": "Common punctuations that are used in Dumaget Bulos are the same in Filipino and English"
+    },
+    {
+      "BULOS": "I tuldok (.) ay pegemit de lawis ni pangungosan a gesalaysay",
+      "FILIPINO": "Ang tuldok (.) ay ginagamit sa dulo ng pangungusap na nagsasalaysay o nagbibigay ng ulos",
+      "ENGLISH": "The period (.) is used at the end of declarative and imperative sentences"
+    },
+    {
+      "BULOS": "I tande a panantu (?) ay pegemit de lawis ni pangungosap a getantu",
+      "FILIPINO": "Ang tandang pananong (?) ay ginagarnit sa dulo ng pangungusap na nagtatanong",
+      "ENGLISH": "The question mark (?) is used at the end of the interrogative sentences"
+    },
+    {
+      "BULOS": "I tande a pademdem (!) ay pegemit de lawis ni pangungosap a gepahayeg ni matindi a demdemin talad ni lakut, kidded, gebulas o sobra a salig",
+      "FILIPINO": "Ang tandang padamdam (!) ay ginagamit sa dulo ng pangungusap na nagpapahayag ng matinding damdamin tulad ng takot, gulat, galit, o sobrang saya",
+      "ENGLISH": "The exclamation point (!) is used at the end of sentences that express intense emotion such as fear, surprise, anger, or happiness"
+    },
+    {
+      "BULOS": "I panipi(\"\") ay pegemit de pagsolat ni pagsurot ni kaagtaan o mga surot a pebigkas",
+      "FILIPINO": "Ang panipi (\" \") ay ginagamit sa pagsipi ng pag-uusap ng mga tao o mga salitang bigkas",
+      "ENGLISH": "The quotation marks (\" \") are used to enclose direct speech and quotes"
+    },
+    {
+      "BULOS": "Gebesa ni aklat i anak",
+      "FILIPINO": "Nagbabasa ng aklat ang bata",
+      "ENGLISH": "The child is reading a book"
+    },
+    {
+      "BULOS": "Amuyong, tumabu ka ngona ni orat",
+      "FILIPINO": "Amuyong, umigib ka muna ng tubig",
+      "ENGLISH": "Amuyong, fetch a pail of water"
+    },
+    {
+      "BULOS": "Kapide ka nototul?",
+      "FILIPINO": "Kailan ka aalis?",
+      "ENGLISH": "When are you leaving?"
+    },
+    {
+      "BULOS": "Ànu i ngalan mu?",
+      "FILIPINO": "Ano'ng pangalan mo?",
+      "ENGLISH": "What is your name?"
+    },
+    {
+      "BULOS": "Aduy! Kiniduttok",
+      "FILIPINO": "Aray! Kinurot ako",
+      "ENGLISH": "Ouch! I am pinched"
+    },
+    {
+      "BULOS": "Ay! Ti bebek!",
+      "FILIPINO": "Yay! may ahas!",
+      "ENGLISH": "Hey! Snake!"
+    },
+    {
+      "BULOS": "I sabi ni Inoy \"Wet ampus a gelakad tuwi a abi\"",
+      "FILIPINO": "Ang sabi ni nanay, \"Wag kang laging naglalakad tuwing gabi\"",
+      "ENGLISH": "Mother said, \"Do not go out at night.\" / Mother said, \"Do not walk at night.\""
+    },
+    {
+      "BULOS": "I kuwit (,) ay pegemit de sandeli a tegil o pag-innawa",
+      "FILIPINO": "Ang kuwit (,) ay ginagamit sa sandaling hinto o paghinga",
+      "ENGLISH": "The comma (,) is used with words that need a short pause"
+    },
+    {
+      "BULOS": "I kuwit ay pegemit de pagbukod-bukod ni ngalan o begey a pe olo isin",
+      "FILIPINO": "Ang kuwit (,) ay ginagamit sa paghihiwalay ng ngalan o bagay na iniisa-isa",
+      "ENGLISH": "Comma is used to separate succession of names or items"
+    },
+    {
+      "BULOS": "Bumile ka de tindahan ni kappa, toyu, paminta, pati asin",
+      "FILIPINO": "Bumili ka sa tindahan ng mantika, tuyo, paminta at asin",
+      "ENGLISH": "Please buy cooking oil, dried fish, pepper, and salt"
+    },
+    {
+      "BULOS": "I kuwit ay pegemit de loub ni pangungosap para de saglit a pagtegil",
+      "FILIPINO": "Ang kuwit ay ginagamit sa loob ng pangungusap para sa saglit na paghinto",
+      "ENGLISH": "Comma is written within a sentence for a pause"
+    },
+    {
+      "BULOS": "Habe nagkebihesan kami a kadumagetan, nagkohubeden pan i dikami a kalasan",
+      "FILIPINO": "Habang nabibihisang kaming katutubo, nahuhubaran naman ang aming kabundukan",
+      "ENGLISH": "While we, the indigenous people, are being clothed, our mountains are being stripped bare."
+    },
+    {
+      "BULOS": "I kuwit ay pegemit de pagbukod-bukod ni sugnay a eyen gekaeisin mula de sugnay a gekaeisin",
+      "FILIPINO": "Ang kuwit ay ginagamit sa paghihiwalay ng sugnay na di-nakapag-isa mula sa sugnay na nakapag-iisa",
+      "ENGLISH": "It is used to separate a dependent clause that comes before an independent clause"
+    },
+    {
+      "BULOS": "Dehil sinabi mo, dumawetok de kalasan",
+      "FILIPINO": "Dahil sinabi mo, umakyat ako sa bundok",
+      "ENGLISH": "Because of what you said, I went to the mountain"
+    },
+    {
+      "BULOS": "I kuwit ay pegemit de pagsolat ni pitsa",
+      "FILIPINO": "Ang kuwit ay ginagamit sa pagsulat ng petsa",
+      "ENGLISH": "Comma is used when wiriting dates"
+    },
+    {
+      "BULOS": "Sitimri 8, 1998",
+      "FILIPINO": "Sityembre 8, 1998",
+      "ENGLISH": "36046"
+    },
+    {
+      "BULOS": "I totuldok (:) ay pegemit de getala ni mga surot ni pa ulo isin be tiduman a aduwa o higit pa a surot",
+      "FILIPINO": "Ang tutuldok (:) ay ginagamit sa pagtatala ng mga salita ng paisa-isa",
+      "ENGLISH": "Colon (:) is used in identifying list of items"
+    },
+    {
+      "BULOS": "Mga sangkap de paglotu ni sinugno",
+      "FILIPINO": "Mga sangkap sa pagluluto ng sinugno",
+      "ENGLISH": "Ingredients in cooking doup known as sinugno"
+    },
+    {
+      "BULOS": "I gitling (-) ay makmuk a gemit. lo ay i mga sumusunod",
+      "FILIPINO": "Gitling (-). Ang gitling ay maraming garnit. Ito ay ang mga sumusunod",
+      "ENGLISH": "The hyphen (-) has many uses"
+    },
+    {
+      "BULOS": "Pegemit a gitling de mga surot a peliwet a te kakmukan a kahulugen be eyen io peliwet",
+      "FILIPINO": "Ginagamit ang gitling sa mga salitang inuulit na may kaibang kahulugan kung hindi ito uulitin",
+      "ENGLISH": "It is used in words that are pronounced twice which has different meaning if not repeated"
+    },
+    {
+      "BULOS": "De mga surot a gemut a peliwet, io ay eyen pegemitan ni gitling",
+      "FILIPINO": "Sa mga salitang-ugat na inuulit, ito ay hindi ginagamitan ng gitling",
+      "ENGLISH": "Hyphen is not used to rootword even if it is repeated"
+    },
+    {
+      "BULOS": "Pegemit i gitling de impit a tinog de gitna a surot",
+      "FILIPINO": "Ginagamit ang gilling sa impit na tunog sa gitna ng salita",
+      "ENGLISH": "Hyphen is used to indicate glottal stop at the middle of the word"
+    },
+    {
+      "BULOS": "I pagsolat de hanga a tetik",
+      "FILIPINO": "Ang pagsulat ng malaking titik",
+      "ENGLISH": "Capitals"
+    },
+    {
+      "BULOS": "De pagsolat ni Dumaget Bulos, i gernit a hanga a tetik ay talad din ni tuntonin ni gemit nio de Filipino ke English",
+      "FILIPINO": "Sa pagsusulat ng Dumaget Bulos, ang gamit ng malaking titik ay tulad din ng tuntunin ng gamit nito sa English at Filipino",
+      "ENGLISH": "In writing the Dumaget Bulos, the use of capital letter is the same with the rules in Filipino and English"
+    },
+    {
+      "BULOS": "Pegemit i hanga a tetik de simula ni pangungosap",
+      "FILIPINO": "Ginagamit ang malaking titik sa simula ng pangungusap",
+      "ENGLISH": "Capital letters are used at the beginning of the sentence"
+    },
+    {
+      "BULOS": "Pegemit i hanga a tetik de simula ni tangi a ngalan ni agta umpisa ni agta, lugel. adow, bulan pati kakmukan pa a ngalan",
+      "FILIPINO": "Ginagamit ang malaking titik sa simula ng tanging pangalan ng tao, lugar, araw. buwan at iba pang mga tanging ngalan",
+      "ENGLISH": "Capital letters are used for the proper name of persons, places, Events. It is also used in days and months and brand names"
+    },
+    {
+      "BULOS": "Pegemit i hanga a tetik de pagsolat ni pamaget a aklat, tula, kuwentu ki pangyayadi",
+      "FILIPINO": "Ginagamit ang malaking titik sa pagsusulat ng pamagat ng aklat, tula, kwento at pangyayari",
+      "ENGLISH": "Capital letters are used in writing the title of a book, poem, story and event"
+    },
+    {
+      "BULOS": "Bowon i demit na",
+      "FILIPINO": "Bago ang damit niya",
+      "ENGLISH": "Her/His dress is new"
+    },
+    {
+      "BULOS": "Butingting",
+      "FILIPINO": "tiyak na pangalan ng tao",
+      "ENGLISH": "proper name of person"
+    },
+    {
+      "BULOS": "Pinag-anakan",
+      "FILIPINO": "tiyak na pangalan ng lugar",
+      "ENGLISH": "proper name of place"
+    },
+    {
+      "BULOS": "I Mahabe a Pagotan",
+      "FILIPINO": "Ang Mahabang Gulod",
+      "ENGLISH": "The Mountain Range"
+    },
+    {
+      "BULOS": "I Maliyentog ki Tapok",
+      "FILIPINO": "Si Maliyentog at ang Ulan",
+      "ENGLISH": "Maliyentog and the Rain"
+    },
+    {
+      "BULOS": "I Pasko",
+      "FILIPINO": "Ang Pasko",
+      "ENGLISH": "Christmas"
+    },
+    {
+      "BULOS": "Pagpaabuyà de Panimula a Gramatika ni Surot a Dumaget Bulos",
+      "FILIPINO": "Pagpapakilala sa Panimulang Gramatika ng Wikang Dumaget Bulos",
+      "ENGLISH": "Introduction to Basic Dumaget Bulos Grammar"
+    },
+    {
+      "BULOS": "Manga marker ki manga isturuktora ni sugnay",
+      "FILIPINO": "Mga marker at mga Istruktura ng sugnay",
+      "ENGLISH": "Markers and clause structure"
+    },
+    {
+      "BULOS": "Tilawon a surot i pegemit ni pang-personal ki pang-impersonal de Surot a Dumaget Bulos",
+      "FILIPINO": "Tatlong salita ang ginagamit na pampersonal at pang-impersonal sa Wikang Bulos",
+      "ENGLISH": "Three words are used in personal and interpersonal"
+    },
+    {
+      "BULOS": "I i a i kahulogen a ang a pegemit de pagpapaabuyà ni mga begey, lugel ki pangyayadi",
+      "FILIPINO": "Ang i na ang kahulugan ay ang ay ginagamit sa pagpapakilala ng mga bagay, lugar at pangyayari",
+      "ENGLISH": "i which means the is used in introducing things, place and events."
+    },
+    {
+      "BULOS": "I i a i kahulogen a si a pegemit de pagpapaabuyà ni agta",
+      "FILIPINO": "Ang i na ang kahulugan ay si ay ginagamit sa pagpapakilala ng tao",
+      "ENGLISH": "i which means si is used in introducing person"
+    },
+    {
+      "BULOS": "I ni a i kahulogen a ng a pegemit de pagpapaabuyà ni begey, lugel ki pangyayadi a getokuy",
+      "FILIPINO": "Ang ni na ang kahulugan ay ng ay ginagamit sa pagpapakilala ng bagay, lugar at pangyayari na tinutukoy",
+      "ENGLISH": "ni which means ng is used in introducing things, place and events"
+    },
+    {
+      "BULOS": "Nappatud pala di",
+      "FILIPINO": "Maari ring sabihin na",
+      "ENGLISH": "It could also be said as"
+    },
+    {
+      "BULOS": "Malawwa i kalasan",
+      "FILIPINO": "Malawak ang gubat",
+      "ENGLISH": "The forest is vast"
+    },
+    {
+      "BULOS": "Masampat i Dapis",
+      "FILIPINO": "Maganda si Dapis",
+      "ENGLISH": "Dapis is beautiful"
+    },
+    {
+      "BULOS": "Hanga i beloy ni patod",
+      "FILIPINO": "Malaki ang bahay ng lalaki",
+      "ENGLISH": "The house of man is big"
+    },
+    {
+      "BULOS": "Hanga i beloy nun patod",
+      "FILIPINO": "Malaki ang bahay ng lalaki",
+      "ENGLISH": "The house of the man is big"
+    },
+    {
+      "BULOS": "Pegemit i ni bege i petokuy a ge surot ay de alani diya",
+      "FILIPINO": "Ginagamit ang ni kung ang tinutukoy ng nagsasalita ay malapit sa kanya",
+      "ENGLISH": "ni is used if the speaker is referring to something which is near to her/him"
+    },
+    {
+      "BULOS": "Pegemit i nun bege i petokuy a ge surot ay de alayu diya",
+      "FILIPINO": "Ginagamit ang nun kung ang tinutukoy ng nagsasalita ay malayo sa kanya",
+      "ENGLISH": "nun is used if the speaker is referring to something which far from her/him"
+    },
+    {
+      "BULOS": "Pinangan ni adew i betag",
+      "FILIPINO": "Kinain ng unggoy ang saging",
+      "ENGLISH": "Monkey ate the banana"
+    },
+    {
+      "BULOS": "Pinangan ni Tirintin i agěkat",
+      "FILIPINO": "Kinain ni Tirintin ang agakat",
+      "ENGLISH": "Tirintin ate agēkat"
+    },
+    {
+      "BULOS": "Namangan i Tirintin ni agěkat",
+      "FILIPINO": "Kumain si Tirintin ng agakat",
+      "ENGLISH": "Tirintin ate agēkat"
+    },
+    {
+      "BULOS": "Namangan i Tirintin ni agěkat",
+      "FILIPINO": "Kakain si Tirintin ng agakat",
+      "ENGLISH": "Tirintin will eat agěkat"
+    },
+    {
+      "BULOS": "I ni a i kahulogen a ni a pegemit de pagpapaabuyà ni agta a petokuy",
+      "FILIPINO": "Ang ni na ang kahulugan ay ni rin ay ginagamit sa pagpapakilala ng taong tinutukoy",
+      "ENGLISH": "ni is used in introducing person"
+    },
+    {
+      "BULOS": "I de a i kahulogen a sa a pegemit dē pagpapaabuyà ni bègey o bègey a tinanggep, pinamuoyen o binoy pati lugel o lugel a pinamuoyen, inapuan o kinàngan",
+      "FILIPINO": "Ang dē na ang kahulugan ay sa ay ginagamit sa pagpapakilala ng bagay o bagay na linanggap, pinaglagyan o ibinigay; at ng lugar o lugar ng pinaglagyan, pinanggalingan o pinuntahan",
+      "ENGLISH": "dē which means sa is used in introducing things or things being received"
+    },
+    {
+      "BULOS": "Pagpaabuyà ni bègey",
+      "FILIPINO": "Pagpapakilala ng bagay",
+      "ENGLISH": "Introducing things"
+    },
+    {
+      "BULOS": "Pagpaabuyà ni bègey a tinanggep",
+      "FILIPINO": "Pagpapakilala ng bagay na tinanggap",
+      "ENGLISH": "Introducing things being received"
+    },
+    {
+      "BULOS": "Pinamuoyen",
+      "FILIPINO": "Pinaglagyan",
+      "ENGLISH": "where an item came from"
+    },
+    {
+      "BULOS": "Binoy",
+      "FILIPINO": "Ibinigay",
+      "ENGLISH": "Something given to"
+    },
+    {
+      "BULOS": "Lugel",
+      "FILIPINO": "Lugar",
+      "ENGLISH": "Place"
+    },
+    {
+      "BULOS": "Lugel a pinamuoyen",
+      "FILIPINO": "Lugar na pinaglagyan",
+      "ENGLISH": "Place where it was placed"
+    },
+    {
+      "BULOS": "Inapuan",
+      "FILIPINO": "Pinanggalingan",
+      "ENGLISH": "Source"
+    },
+    {
+      "BULOS": "Kinàngan",
+      "FILIPINO": "Pinuntahan",
+      "ENGLISH": "Visited"
+    },
+    {
+      "BULOS": "Mokpal i samoy ni Masampat",
+      "FILIPINO": "Makapal ang buhok ni Masampat",
+      "ENGLISH": "Masampat has thick hair"
+    },
+    {
+      "BULOS": "Děku i alit a oyo",
+      "FILIPINO": "Sa akin ang damit na ito",
+      "ENGLISH": "This dress is mine"
+    },
+    {
+      "BULOS": "I alit a oyo i binoy děku",
+      "FILIPINO": "Ang damit na ito ang ibinigay sa akin",
+      "ENGLISH": "This dress is given to me"
+    },
+    {
+      "BULOS": "Binoy děku i alit a oyo",
+      "FILIPINO": "Ibinigay sa akin ang damit na ito",
+      "ENGLISH": "This dress is given to me"
+    },
+    {
+      "BULOS": "Tiningos i kanin dě agid",
+      "FILIPINO": "Binalot ang kanin sa dahon",
+      "ENGLISH": "Rice was wrapped in leaves"
+    },
+    {
+      "BULOS": "Binoy ni Onad i olam dě asù",
+      "FILIPINO": "Ibinigay ni Onad ang ulam sa aso",
+      "ENGLISH": "The viand was given by Onad to the dog"
+    },
+    {
+      "BULOS": "Kumangok dě Pinag-anakan",
+      "FILIPINO": "Pumunta ako sa Pinag-anakan",
+      "ENGLISH": "I went to Pinag-anakan"
+    },
+    {
+      "BULOS": "Kumang kami dě Besiyu",
+      "FILIPINO": "Pumunta kami sa Basyo",
+      "ENGLISH": "We went to Besiyu"
+    },
+    {
+      "BULOS": "Pinuoy ni Onad un aklat dě lamesa",
+      "FILIPINO": "Inilagay ni Onad ang aklat sa mesa",
+      "ENGLISH": "Onad put the book on the table"
+    },
+    {
+      "BULOS": "Umapu ok dě Anuling",
+      "FILIPINO": "Galing ako sa Anuling",
+      "ENGLISH": "I have been to Anuling"
+    },
+    {
+      "BULOS": "Umapo kami dě Malapsay",
+      "FILIPINO": "Galing kami sa Maputi",
+      "ENGLISH": "We have been to Maputi"
+    },
+    {
+      "BULOS": "Dumumanok dě Malolus",
+      "FILIPINO": "Pumunta ako sa Malolos",
+      "ENGLISH": "I went to Malolos"
+    },
+    {
+      "BULOS": "Dumuman kami de Kapitulyu",
+      "FILIPINO": "Pumunta kami sa Kapitolyo",
+      "ENGLISH": "We went to Capitol"
+    },
+    {
+      "BULOS": "I di a i kahulogen ay kay ay pegemit de pagpapaabuyà a agta a biniyen o tumanggep ni isin a bègey",
+      "FILIPINO": "Ang di na ang kahulugan ay kay ay ginagamit sa pagpapakilala ng tao na binigyan o tumanggap ng isang bagay",
+      "ENGLISH": "di which means kay is used to introducing person who receives something"
+    },
+    {
+      "BULOS": "Nagboy ni bulaklak i Isap di Bulinggit",
+      "FILIPINO": "Nagbigay ng bulaklak si Isap kay Bulinggit",
+      "ENGLISH": "Isap gave a flower to Bulinggit"
+    },
+    {
+      "BULOS": "I surot a pegemit de pagsasaad a makmuk",
+      "FILIPINO": "Mga salitang ginagamit sa pagsasaad ng marami",
+      "ENGLISH": "Singular and Plural Forms of Nouns"
+    },
+    {
+      "BULOS": "Un surot ide a pegemit de pagtantu",
+      "FILIPINO": "Mga salitang ginagamit sa pagtatanong",
+      "ENGLISH": "Words used in asking questions"
+    },
+    {
+      "BULOS": "Inú i inoy mo?",
+      "FILIPINO": "Sino ang nanay mo?",
+      "ENGLISH": "Who is your mother?"
+    },
+    {
+      "BULOS": "Anu i ngalan mo?",
+      "FILIPINO": "Ano ang pangalan mo?",
+      "ENGLISH": "What is your name?"
+    },
+    {
+      "BULOS": "Dênu ka paagaw?",
+      "FILIPINO": "Saan ka pupunta?",
+      "ENGLISH": "Where are you going?"
+    },
+    {
+      "BULOS": "Kapide ka nouli?",
+      "FILIPINO": "kailan ka uuwi?",
+      "ENGLISH": "When are you going?"
+    },
+    {
+      "BULOS": "Pidê man i bile mu de alit?",
+      "FILIPINO": "Magkano ang bili mo sa damit?",
+      "ENGLISH": "How much is the dress?"
+    },
+    {
+      "BULOS": "Pide kamu a magiwinale?",
+      "FILIPINO": "Ilan kayong magkakapatid?",
+      "ENGLISH": "How many siblings are you in the family?"
+    },
+    {
+      "BULOS": "Papalanu ka gesaing?/papalanu ka a gepakaluto?",
+      "FILIPINO": "Paano ka nagsasaing?",
+      "ENGLISH": "How do you cook rice?"
+    },
+    {
+      "BULOS": "Namoy man i Lalang ni kabulaklakan di Butingting?",
+      "FILIPINO": "Nagbigay ba si Lalang ng mga bulaklak kay Butingting?",
+      "ENGLISH": "Did Lalang gave some flowers to Butingting?"
+    },
+    {
+      "BULOS": "Namoy man?/Nagboy mangane?",
+      "FILIPINO": "Nagbigay ba?",
+      "ENGLISH": "Did she/he give?"
+    },
+    {
+      "BULOS": "Mga Panghalip",
+      "FILIPINO": "Mga Panghalip",
+      "ENGLISH": "Pronoun"
+    },
+    {
+      "BULOS": "Ona a Pangkat",
+      "FILIPINO": "Unang Pangkat",
+      "ENGLISH": "First Group"
+    },
+    {
+      "BULOS": "Ikitam a Pilipenu",
+      "FILIPINO": "Tayo ay Pilipino",
+      "ENGLISH": "We are Filipino"
+    },
+    {
+      "BULOS": "Ikami i gehande ni papangan",
+      "FILIPINO": "Kami ang naghahanda ng pagkain",
+      "ENGLISH": "We prepared the food"
+    },
+    {
+      "BULOS": "Aku i nanalu",
+      "FILIPINO": "Ako ang nagwagi",
+      "ENGLISH": "I won"
+    },
+    {
+      "BULOS": "Pumasok ok de paadelan",
+      "FILIPINO": "Pumasok ako sa paaralan",
+      "ENGLISH": "I go to school"
+    },
+    {
+      "BULOS": "Dumagetok, pemalake ku!",
+      "FILIPINO": "Dumagat ako, ipinagmamalaki ko.",
+      "ENGLISH": "I am a Dumaget, I am proud of it."
+    },
+    {
+      "BULOS": "I aku de inapoan ni surot ay nagkappani ok",
+      "FILIPINO": "Ang ako sa hulihan ng salita ay nagiging ok",
+      "ENGLISH": "ako at the end of a word becomes ok"
+    },
+    {
+      "BULOS": "Pebigkas io ni mapari-pari nagpaabot ni inabutan a surot, bege ay pesolat io a kakoloy ni inabutan a surot",
+      "FILIPINO": "Binibigkas ito ng mabilis kasunod ng sinundang salita, kaya isusulat bilang ibang salita",
+      "ENGLISH": "When ok follows to the word that ends in consonant, it is written as part of that word because of past pronunciation"
+    },
+    {
+      "BULOS": "I Dumaget ok a aduwa a surot ay pesolat a isin a surat pania dehilan de mapari-pari a pagbigkas dio kung kaya io ay nappani Dumagetok.",
+      "FILIPINO": "Ang Dumaget ok na dalawang salita ay isusulat na isang salita na Dumagetok dahilan sa bilis ng bigkas nito. Kung paghihiwalayin ang pagsulat maiiba ang pagbigkas ng ibang babasa",
+      "ENGLISH": "Dumaget ok which means Dumagat ako will be wriiten as one word - Dumagetok because of last prunciation of the speaker of the language. If it will be written as Dumaget ok, non-speaker of the language who will read it will have different tone"
+    },
+    {
+      "BULOS": "Kakmukan pan a halimbewa",
+      "FILIPINO": "Iba pang halimbawa",
+      "ENGLISH": "Other examples"
+    },
+    {
+      "BULOS": "Be i ok ay geabut de surol a nagkopugtus de patinig, sosolat yo ni hiwalay",
+      "FILIPINO": "Kung ang ok naman ay sumusunod sa salitang nagtatapos sa patinig. ihihiwalay ito ng sulat",
+      "ENGLISH": "When ok follows to the word that ends in vowels such as a, e, i, o, u, it will be written separately"
+    },
+    {
+      "BULOS": "Patawedinok mu",
+      "FILIPINO": "Patawarin mo ako",
+      "ENGLISH": "Please, forgive me"
+    },
+    {
+      "BULOS": "Nototulok di",
+      "FILIPINO": "Aalis na ako",
+      "ENGLISH": "I will leave"
+    },
+    {
+      "BULOS": "Katnappatodok a tabyengan?",
+      "FILIPINO": "Maari mo ba akong tulungan?",
+      "ENGLISH": "Can you help me?"
+    },
+    {
+      "BULOS": "Nakangok duman de tanoman",
+      "FILIPINO": "Pupunta ako sa halamanan",
+      "ENGLISH": "I will go to the garden"
+    },
+    {
+      "BULOS": "Dêno ikamu noduman?",
+      "FILIPINO": "Saan kayo pupunta?",
+      "ENGLISH": "Where will go?"
+    },
+    {
+      "BULOS": "Dêno ka paagaw?",
+      "FILIPINO": "Saan ka pupunta?",
+      "ENGLISH": "Where will you go?"
+    },
+    {
+      "BULOS": "Ikaw i edup ko",
+      "FILIPINO": "Ikaw ang buhay ko",
+      "ENGLISH": "You are my life"
+    },
+    {
+      "BULOS": "Ide i dêku a kakoloy",
+      "FILIPINO": "Sila ang aking mga kasama",
+      "ENGLISH": "They are my company"
+    },
+    {
+      "BULOS": "Eya i dêku a ama",
+      "FILIPINO": "Siya ang aking ama",
+      "ENGLISH": "He is my father"
+    },
+    {
+      "BULOS": "Bege matande i petokuy i Ikaw a nagkappane ikamu (misan isin la i petokuy.) lo a tande a paggelang de pesan a gekatande",
+      "FILIPINO": "Kung matanda ang tinutukoy ang ikaw ay nagiging ikamu (kahit isa lang ang tinutukoy). Ito ay tanda ng paggalang sa lahat ng nakatatanda",
+      "ENGLISH": "If the speaker is referring to an older person, ikamu is used instead of ikaw, even the person being referred to is only one. This is an expression of respect to elder person"
+    },
+    {
+      "BULOS": "-",
+      "FILIPINO": "Ang ide na ginagamit na maramihan ay ginagamit din na isahan kung ang tinutukoy ay nakatatanda sa nagsasalita",
+      "ENGLISH": "Ide which is used in plural form is also used in singular if referring to elder persons"
+    },
+    {
+      "BULOS": "I ide a sorot a paggelang a pegemit din de gekatande. Subelit, io a pegemit la de paggelang de hepag, beyaw, panuwangan pati de gekatande a mangayun ni ayùn",
+      "FILIPINO": "Ang ide ay salitang paggalang na ginagamit din sa nakatatanda. Subalit, ito ay ginagamit lamang bilang paggalang sa mga hipag, bayaw, biyenan at mga nakatatandang kamag-anak ng asawa",
+      "ENGLISH": "Ide is a word of respect referring to elder person is only used to refer to sister-in-law, mother-in-law, father-in-law and relative elders of husband or wife"
+    },
+    {
+      "BULOS": "I atte ay gekatande de gesurot kaya naadi gemitin na i ide de paggelang ki eyen i buot a sasabi ay makmuk. De Tagelog ginarnit pa la un sina bilang paggelang de petokuy a eisin a agta dehil gekatande io de gesurot.",
+      "FILIPINO": "Ang ate ay nakatatanda sa nagsasalita kaya maaaring gamitin ang ide na tanda ng paggalang kahit isa lamang ang tinutukoy",
+      "ENGLISH": "Ate is an older sister of the speaker so ide can be used to refer to her, even the person being referred to is only one"
+    },
+    {
+      "BULOS": "Ikaw i pegemit sa halip a ide dehil I getokuy ni gesurot ay gekaanak diya",
+      "FILIPINO": "Ikaw ang ginagamit sa halip na ide sapagkat ang tinutukoy ng nagsasalita ay mas bata sa kanya",
+      "ENGLISH": "Ikaw is used to refer to a person who is younger or at the same age of the speaker"
+    },
+    {
+      "BULOS": "Pangkaduwa a Pangkat",
+      "FILIPINO": "Pangalawang Pangkat",
+      "ENGLISH": "Second Group"
+    },
+    {
+      "BULOS": "Ide ate man di kaya i magtaptap",
+      "FILIPINO": "Si ate na kaya ang maglaba",
+      "ENGLISH": "Would it be possible that ate would wash the clothes?"
+    },
+    {
+      "BULOS": "Ikaw man di kaya i magtaptap",
+      "FILIPINO": "Ikaw na kaya ang maglaba",
+      "ENGLISH": "Can you wash the clothes?"
+    },
+    {
+      "BULOS": "Amitin tam un ikan",
+      "FILIPINO": "Kuhanin natin ang isda",
+      "ENGLISH": "Let us get the fish"
+    },
+    {
+      "BULOS": "Dian tam ni kolay un larawen",
+      "FILIPINO": "Lagyan natin ng kulay ang larawan",
+      "ENGLISH": "Let us color the picture"
+    },
+    {
+      "BULOS": "Biyen tam ni sinaing un manganak",
+      "FILIPINO": "Bigyan natin ng kanin ang mga bata",
+      "ENGLISH": "Let us give rice to the children"
+    },
+    {
+      "BULOS": "Binoy mi un kapapelan dide",
+      "FILIPINO": "Ibinigay namin ang mga papel sa kanila",
+      "ENGLISH": "We gave the papers to them"
+    },
+    {
+      "BULOS": "Inane mi un paray",
+      "FILIPINO": "Inani namin ang mga palay",
+      "ENGLISH": "We harvested the rice"
+    },
+    {
+      "BULOS": "Inamit mi un kademetan",
+      "FILIPINO": "Kinuha namin ang mga damit",
+      "ENGLISH": "We get the dresses"
+    },
+    {
+      "BULOS": "Biyen mo i eya ni ikan",
+      "FILIPINO": "Bigyan mo siya ng isda",
+      "ENGLISH": "Give him/her fish"
+    },
+    {
+      "BULOS": "Lenisin mo i beloy",
+      "FILIPINO": "Linisin mo ang bahay",
+      "ENGLISH": "Clean the house"
+    },
+    {
+      "BULOS": "Amitin yu un di kamu",
+      "FILIPINO": "Kunin ninyo ang para sa inyo",
+      "ENGLISH": "Get what is for you"
+    },
+    {
+      "BULOS": "Boyin yu un papangan nunde manganak",
+      "FILIPINO": "Ibigay ninyo ang pagkain sa mga bata",
+      "ENGLISH": "Give the foods to the children"
+    },
+    {
+      "BULOS": "Tapusin yu i yedein",
+      "FILIPINO": "Tapusin ninyo ang gawain",
+      "ENGLISH": "Finish your work"
+    },
+    {
+      "BULOS": "Binoy na un bokan",
+      "FILIPINO": "Ibinigay niya ang bulaklak",
+      "ENGLISH": "He/She gave the flower"
+    },
+    {
+      "BULOS": "Binoy na i maman di Bulala",
+      "FILIPINO": "Ibinigay niya ang nganga kay Bulala",
+      "ENGLISH": "He/She gave the maman to Bulala"
+    },
+    {
+      "BULOS": "Sabi na, masampat aku",
+      "FILIPINO": "Sabi niya, maganda ako",
+      "ENGLISH": "She/He said, I am beautiful"
+    },
+    {
+      "BULOS": "Inamit de un kalatean",
+      "FILIPINO": "Kinuha nila ang mga yantok",
+      "ENGLISH": "They got the rattan"
+    },
+    {
+      "BULOS": "Papalano de yinade un beloy?",
+      "FILIPINO": "Paano nila ginawa ang bahay",
+      "ENGLISH": "How did they build the house?"
+    },
+    {
+      "BULOS": "Binoy de un papel nunde anak",
+      "FILIPINO": "Ibinigay nila ang papel sa bata",
+      "ENGLISH": "They gave the paper to the child"
+    },
+    {
+      "BULOS": "Pangkatiluwon a Pangkat",
+      "FILIPINO": "Pangatlong Pangkat",
+      "ENGLISH": "Third Group"
+    },
+    {
+      "BULOS": "Dikitam i beloy de Tumagtag",
+      "FILIPINO": "Sa atin ang bahay sa Tumagtag",
+      "ENGLISH": "The house in Tumagtag is ours"
+    },
+    {
+      "BULOS": "Dikitam i potok a kinataplan",
+      "FILIPINO": "Sa atin ang lupaing ninuno",
+      "ENGLISH": "The ancestral domain is ours"
+    },
+    {
+      "BULOS": "Dikitam i paadelan a oyo",
+      "FILIPINO": "Sa atin ang paaralang ito",
+      "ENGLISH": "This school is ours"
+    },
+    {
+      "BULOS": "Dēku i demit a iwina",
+      "FILIPINO": "Sa akin ang damit na iyon",
+      "ENGLISH": "That dress is mine"
+    },
+    {
+      "BULOS": "Dēku i silpon a oyo",
+      "FILIPINO": "Sa akin ang cellphone na ito",
+      "ENGLISH": "This cellphone is mine"
+    },
+    {
+      "BULOS": "Dikami i beloy de Tagpis",
+      "FILIPINO": "Sa amin ang bahay sa Tagpis",
+      "ENGLISH": "The house in Tagpis is ours"
+    },
+    {
+      "BULOS": "Dikami i bengka",
+      "FILIPINO": "Sa amin ang bangka",
+      "ENGLISH": "The boat that is ours"
+    },
+    {
+      "BULOS": "Dikaw i demit a iwina",
+      "FILIPINO": "Sa iyo ang damit na iyan",
+      "ENGLISH": "That dress is yours"
+    },
+    {
+      "BULOS": "Dikaw i silpon a oyo",
+      "FILIPINO": "Sa iyo ang cellphone na ito",
+      "ENGLISH": "This cellphone is yours"
+    },
+    {
+      "BULOS": "Dikamu i beloy de Sinilaben",
+      "FILIPINO": "Sa inyo ang bahay sa Sinilaban",
+      "ENGLISH": "The house in Sinilaban is yours"
+    },
+    {
+      "BULOS": "Dikamu i bengka a iwina",
+      "FILIPINO": "Sa inyo ang bangka na iyan",
+      "ENGLISH": "The boat is yours"
+    },
+    {
+      "BULOS": "Diya i demit a iwina",
+      "FILIPINO": "Sa kaniya ang damit na iyan",
+      "ENGLISH": "That dress is hers/him"
+    },
+    {
+      "BULOS": "Diya i silpon a oyo",
+      "FILIPINO": "Sa kaniya ang cellphone na ito",
+      "ENGLISH": "That cellphone is hers/him"
+    },
+    {
+      "BULOS": "Didē i beloy a inon",
+      "FILIPINO": "Sa kanila ang bahay na iyon",
+      "ENGLISH": "That house is theirs"
+    },
+    {
+      "BULOS": "Didē un bebuy a naholi",
+      "FILIPINO": "Sa kanila ang nahuling baboy ramo",
+      "ENGLISH": "The wild boar being caught is theirs"
+    },
+    {
+      "BULOS": "Manegu a Bowan a Taun!",
+      "FILIPINO": "Manigong Bagong Taon!",
+      "ENGLISH": "Happy New Year!"
+    },
+    {
+      "BULOS": "Masaya a pista!",
+      "FILIPINO": "Masayang Kapiyestahan!",
+      "ENGLISH": "Happy Fiesta!"
+    },
+    {
+      "BULOS": "Makmuk a salamat!",
+      "FILIPINO": "Maraming Salamat!",
+      "ENGLISH": "Thank you very much!"
+    },
+    {
+      "BULOS": "I Pandiwa",
+      "FILIPINO": "Ang mga Pandiwa",
+      "ENGLISH": "Verbs"
+    },
+    {
+      "BULOS": "Kailanan ng Pandiwa",
+      "FILIPINO": "Kailanan ng Pandiwa",
+      "ENGLISH": "Verbs Tenses"
+    },
+    {
+      "BULOS": "Nakasila",
+      "FILIPINO": "Nagdaan",
+      "ENGLISH": "Past Tense"
+    },
+    {
+      "BULOS": "Kasalukoyen",
+      "FILIPINO": "Kasalukuyan",
+      "ENGLISH": "Present Tense"
+    },
+    {
+      "BULOS": "Yeyedi pa",
+      "FILIPINO": "Hinaharap",
+      "ENGLISH": "Future Tense"
+    },
+    {
+      "BULOS": "Nagyedi ok ni beloy/Yumadi ok ni beloy",
+      "FILIPINO": "Gumawa ako ng bahay",
+      "ENGLISH": "I built house"
+    },
+    {
+      "BULOS": "Geyedi ok ni beloy",
+      "FILIPINO": "Gumagawa ako ng bahay",
+      "ENGLISH": "I am building house"
+    },
+    {
+      "BULOS": "Gehande ok ni papangan",
+      "FILIPINO": "Naghahanda ako ng pagkain",
+      "ENGLISH": "I am preparing foods"
+    },
+    {
+      "BULOS": "Geyedi ok ni beloy",
+      "FILIPINO": "Gagawa ako ng bahay",
+      "ENGLISH": "I will build a house"
+    },
+    {
+      "BULOS": "",
+      "FILIPINO": "",
+      "ENGLISH": "I will go to the garden"
+    },
+    {
+      "BULOS": "Nangamitok ni aduwa",
+      "FILIPINO": "Kukuha ako ng dalawa",      "ENGLISH": "I will get two"
+    }
+  ]
 }
