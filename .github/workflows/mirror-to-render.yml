@@ -1,6 +1,5 @@
 name: Mirror to BulosBackendServer (Render)
 
-# Triggers on every push to main in your-desire/Bulos-Translator-backend
 on:
   push:
     branches:
@@ -15,9 +14,15 @@ jobs:
       - name: Checkout full history
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history so force-push works correctly
+          fetch-depth: 0
 
       - name: Push mirror to BulosBackendServer
+        env:
+          MIRROR_PAT: ${{ secrets.MIRROR_PAT }}
         run: |
-          git remote add render https://x-access-token:${{ secrets.MIRROR_PAT }}@github.com/TwN1028/BulosBackendServer.git
+          if [ -z "$MIRROR_PAT" ]; then
+            echo "ERROR: MIRROR_PAT secret is not set or is empty"
+            exit 1
+          fi
+          git remote add render "https://x-access-token:${MIRROR_PAT}@github.com/TwN1028/BulosBackendServer.git"
           git push render main --force
