@@ -1,0 +1,23 @@
+name: Mirror to BulosBackendServer (Render)
+
+# Triggers on every push to main in your-desire/Bulos-Translator-backend
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  mirror:
+    name: Push to TwN1028/BulosBackendServer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so force-push works correctly
+
+      - name: Push mirror to BulosBackendServer
+        run: |
+          git remote add render https://x-access-token:${{ secrets.MIRROR_PAT }}@github.com/TwN1028/BulosBackendServer.git
+          git push render main --force
