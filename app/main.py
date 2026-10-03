@@ -15,6 +15,7 @@ from app.routers import (
     dictionary_router,
     evaluation_router,
     alphabet_router,
+    audio_router,
 )
 
 configure_logging()
@@ -63,6 +64,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"OPUS-MT model loading failed at startup: {e}")
         logger.warning("en↔tl translation will fall back to Google Translate only")
+
+    # Connect to MongoDB Atlas for audio storage
+    try:
+        logger.info("Connecting to MongoDB Atlas (audio storage)...")
+        from services.audio_storage import get_audio_storage
+        audio = get_audio_storage()
+        if audio.is_available:
+            logger.info("[AudioStorage] Connected — GridFS ready")
+        else:
+            logger.warning(
+                "[AudioStorage] Not available — MONGODB_URI may not be set. "
+                "Audio upload/download endpoints will return 503."
+            )
+    except Exception as e:
+        logger.warning(f"Audio storage connection failed at startup: {e}")
 
     logger.info("Application startup complete")
 
@@ -194,6 +210,7 @@ def create_application() -> FastAPI:
     app.include_router(dictionary_router)
     app.include_router(evaluation_router)
     app.include_router(alphabet_router)
+    app.include_router(audio_router)
 
     return app
 

@@ -30,3 +30,7 @@ sentencepiece==0.2.0
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
+
+# MongoDB
+pymongo==4.6.1
+dnspython==2.6.1

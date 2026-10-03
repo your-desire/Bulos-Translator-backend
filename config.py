@@ -42,11 +42,9 @@ class Settings(BaseSettings):
     fuzzy_match_threshold: float = Field(default=0.80)
     fuzzy_match_min_length: int = Field(default=3)
 
-    # MongoDB Settings
-    mongodb_url: str = Field(default="")
-    mongodb_database: str = Field(default="bulos_translator")
-    mongodb_max_pool_size: int = Field(default=50)
-    mongodb_min_pool_size: int = Field(default=10)
+    # MongoDB Atlas — audio file storage (GridFS)
+    mongodb_uri:       str = Field(default="")
+    mongodb_audio_db:  str = Field(default="bulos_audio")
 
     # LSTM Translation Settings (Phase 1: Infrastructure - DISABLED by default)
     # IMPORTANT: LSTM is used ONLY as final fallback when Hybrid algorithm fails
