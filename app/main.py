@@ -1,6 +1,5 @@
 """FastAPI application entry point with middleware configuration"""
 import time
-import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,117 +7,123 @@ from fastapi.responses import JSONResponse
 
 from config import settings
 from utils.logging_config import configure_logging, get_logger
-from app.routers import vocabulary_router, translation_router, speech_router, history_router, health_router, dictionary_router, evaluation_router
+from app.routers import (
+    vocabulary_router,
+    translation_router,
+    history_router,
+    health_router,
+    dictionary_router,
+    evaluation_router,
+    alphabet_router,
+    audio_router,
+    stt_router,
+)
 
-# Configure logging before anything else
 configure_logging()
 logger = get_logger(__name__)
 
-# Global service instances
-_db_manager = None
+# Global translation service instance (shared across requests)
 _translation_service = None
-_speech_processor = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application lifespan context manager for startup and shutdown tasks
-    
-    On startup:
-    - Configure logging (already done globally)
-    - Connect to database
-    - Initialize translation service
-    - Initialize speech processor
-    
-    On shutdown:
-    - Disconnect from database
-    """
-    global _db_manager, _translation_service, _speech_processor
-    
-    # Startup
+    """Startup: initialise translation service and OPUS-MT models. Shutdown: nothing to close."""
+    global _translation_service
+
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"CORS origins: {settings.cors_origins}")
-    
+
     try:
-        # Initialize database connection
-        logger.info("Connecting to database...")
-        from services.database import initialize_db_manager
-        _db_manager = initialize_db_manager(
-            connection_string=settings.mongodb_url,
-            database_name=settings.mongodb_database,
-            max_pool_size=settings.mongodb_max_pool_size,
-            min_pool_size=settings.mongodb_min_pool_size
-        )
-        await _db_manager.connect()
-        logger.info("Database connected successfully")
-        
-        # Initialize translation service
         logger.info("Initializing translation service...")
-        try:
-            from services.translation import TranslationService
-            _translation_service = TranslationService(_db_manager)
-            await _translation_service.initialize()
-            logger.info("Translation service initialized successfully")
-        except Exception as e:
-            logger.warning(f"Translation service initialization failed: {str(e)}")
-            logger.warning("Translation endpoints may not be available")
-        
-        # Initialize speech processor
-        logger.info("Initializing speech processor...")
-        try:
-            from services.speech import SpeechProcessor
-            _speech_processor = SpeechProcessor()
-            await _speech_processor.initialize()
-            logger.info("Speech processor initialized successfully")
-            
-            # Store speech processor reference for health checks
-            from app.routers import health
-            health._speech_processor = _speech_processor
-        except Exception as e:
-            logger.warning(f"Speech processor initialization failed: {str(e)}")
-            logger.warning("Speech processing endpoints may not be available")
-        
-        logger.info("Application startup complete")
-        
+        from services.translation import TranslationService
+        _translation_service = TranslationService()
+        await _translation_service.initialize()
+        phrase_count = sum(len(v) for v in _translation_service.phrase_index.values())
+        logger.info(f"Translation service initialized — {phrase_count} indexed phrases")
+        if phrase_count == 0:
+            logger.error("CRITICAL: phrase_index is EMPTY after initialization — translation will not work!")
     except Exception as e:
-        logger.error(f"Failed to initialize application: {str(e)}", exc_info=True)
-        logger.error("Application startup failed - some services may be unavailable")
-    
-    # Yield control to application
-    yield
-    
-    # Shutdown
-    logger.info("Application shutdown initiated")
-    
+        logger.error(f"Translation service initialization FAILED: {e}", exc_info=True)
+        logger.warning("Translation endpoints may not be available")
+
+    # Warm-load OPUS-MT CTranslate2 models at startup so the first en↔tl
+    # request doesn't pay the cold-load cost.
     try:
-        if _db_manager:
-            logger.info("Disconnecting from database...")
-            await _db_manager.disconnect()
-            logger.info("Database disconnected successfully")
+        logger.info("Loading OPUS-MT CTranslate2 models (en↔tl)...")
+        from services.translation import _get_opus
+        opus = _get_opus()
+        if opus is not None:
+            logger.info(
+                f"OPUS-MT models loaded — available directions: {opus.available_directions}"
+            )
+        else:
+            logger.warning(
+                "OPUS-MT models not available — en↔tl will rely on Google Translate"
+            )
     except Exception as e:
-        logger.error(f"Error during database disconnection: {str(e)}", exc_info=True)
-    
+        logger.warning(f"OPUS-MT model loading failed at startup: {e}")
+        logger.warning("en↔tl translation will fall back to Google Translate only")
+
+    # Connect to MongoDB Atlas for audio storage
+    try:
+        logger.info("Connecting to MongoDB Atlas (audio storage)...")
+        from services.audio_storage import get_audio_storage
+        audio = get_audio_storage()
+        if audio.is_available:
+            logger.info("[AudioStorage] Connected — GridFS ready")
+
+            # Sync existing GridFS audio files into training pairs
+            sync_stats = await audio.sync_existing_audio_to_training_pairs()
+            logger.info(
+                f"Audio training data: {sync_stats['total_files']} files, "
+                f"{sync_stats['newly_created']} new pairs synced"
+            )
+        else:
+            logger.warning(
+                "[AudioStorage] Not available — MONGODB_URI may not be set. "
+                "Audio upload/download endpoints will return 503."
+            )
+    except Exception as e:
+        logger.warning(f"Audio storage connection failed at startup: {e}")
+
+    # Load STT model
+    if settings.stt_enabled:
+        try:
+            logger.info(f"Loading STT model: {settings.stt_model_path}...")
+            from services.stt_service import initialize_stt_service
+            initialize_stt_service(
+                model_size_or_path=settings.stt_model_path,
+                device=settings.stt_device,
+                compute_type=settings.stt_compute_type,
+            )
+            logger.info("STT model loaded successfully")
+        except Exception as e:
+            logger.warning(f"STT model loading failed: {e}")
+            logger.warning("Transcription endpoints will return 503 until model is loaded")
+
+    logger.info("Application startup complete")
+
+    yield
+
     logger.info("Application shutdown complete")
 
 
 def create_application() -> FastAPI:
-    """Create and configure FastAPI application instance"""
-    
+    """Create and configure the FastAPI application instance."""
+
     app = FastAPI(
         title=settings.app_name,
-        description="REST API service for language learning with vocabulary management, "
-                    "translation services, speech recognition, and pronunciation evaluation",
+        description="REST API service for Bulos language translation and vocabulary management",
         version=settings.app_version,
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
         debug=settings.debug,
-        lifespan=lifespan  # Use lifespan context manager
+        lifespan=lifespan,
     )
-    
-    # Configure CORS middleware
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -126,115 +131,127 @@ def create_application() -> FastAPI:
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
-    
-    # Request logging middleware with timing information
+
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
-        """Log all requests with timing and status information"""
         start_time = time.time()
-        
-        # Log request start
         logger.info(
             f"Request started: {request.method} {request.url.path} "
             f"Client: {request.client.host if request.client else 'unknown'}"
         )
-        
         try:
             response = await call_next(request)
-            
-            # Calculate processing time
             process_time = time.time() - start_time
-            
-            # Log request completion
             logger.info(
                 f"Request completed: {request.method} {request.url.path} "
                 f"Status: {response.status_code} Duration: {process_time:.3f}s"
             )
-            
-            # Add timing header to response
             response.headers["X-Process-Time"] = f"{process_time:.3f}"
-            
             return response
-            
         except Exception as e:
-            # Calculate processing time even on error
             process_time = time.time() - start_time
-            
             logger.error(
                 f"Request failed: {request.method} {request.url.path} "
                 f"Duration: {process_time:.3f}s Error: {str(e)}",
-                exc_info=True
+                exc_info=True,
             )
             raise
-    
-    # Global exception handler for unhandled 500 errors
+
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        """Handle all unhandled exceptions with consistent error response"""
         logger.error(
-            f"Unhandled exception in {request.method} {request.url.path}: {str(exc)}",
-            exc_info=True
+            f"Unhandled exception in {request.method} {request.url.path}: {exc}",
+            exc_info=True,
         )
-        
         return JSONResponse(
             status_code=500,
             content={
                 "error": "Internal Server Error",
-                "message": "An unexpected error occurred while processing your request",
-                "status_code": 500
-            }
+                "message": "An unexpected error occurred",
+                "status_code": 500,
+            },
         )
-    
-    # HTTPException handler for 4xx errors
+
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
-        """Handle HTTP exceptions with consistent error response format"""
         logger.warning(
             f"HTTP exception in {request.method} {request.url.path}: "
             f"Status {exc.status_code} - {exc.detail}"
         )
-        
         return JSONResponse(
             status_code=exc.status_code,
-            content={
-                "error": exc.detail,
-                "message": exc.detail,
-                "status_code": exc.status_code
-            }
+            content={"error": exc.detail, "message": exc.detail,
+                     "status_code": exc.status_code},
         )
-    
-    # Health check endpoint
+
     @app.get("/health", tags=["Health"])
     async def health_check():
-        """Basic health check endpoint"""
+        return {"status": "healthy", "service": settings.app_name,
+                "version": settings.app_version}
+
+    @app.get("/debug/translation", tags=["Debug"])
+    async def debug_translation():
+        """Shows translation service state — use to verify phrase index is loaded."""
+        if _translation_service is None:
+            return {"status": "not_initialized", "phrase_count": 0}
+        phrase_count = sum(len(v) for v in _translation_service.phrase_index.values())
+        sample_keys = list(_translation_service.phrase_index.keys())[:5]
         return {
-            "status": "healthy",
-            "service": settings.app_name,
-            "version": settings.app_version
+            "status": "initialized",
+            "phrase_count": phrase_count,
+            "sample_keys": sample_keys,
         }
-    
-    # Root endpoint
+
+    @app.get("/debug/opus", tags=["Debug"])
+    async def debug_opus():
+        """Shows OPUS-MT CTranslate2 model load status."""
+        from services.translation import _get_opus
+        opus = _get_opus()
+        if opus is None:
+            return {
+                "status": "unavailable",
+                "available_directions": [],
+                "note": "OPUS-MT failed to load — check startup logs.",
+            }
+        return {
+            "status": "loaded",
+            "available_directions": opus.available_directions,
+            "models_loaded": len(opus.available_directions),
+            "per_key_errors": getattr(opus, "per_key_errors", {}),
+        }
+
+    @app.get("/debug/stt", tags=["Debug"])
+    async def debug_stt():
+        """Shows STT model status and training data stats."""
+        from services.stt_service import get_model_info
+        info = get_model_info()
+        try:
+            from services.audio_storage import get_audio_storage
+            storage = get_audio_storage()
+            info["training_pairs_total"] = await storage.count_training_pairs("bul")
+            info["training_pairs_validated"] = await storage.count_training_pairs("bul", validated_only=True)
+            info["total_audio_files"] = await storage.count_audio_files()
+        except Exception:
+            info["audio_storage"] = "not_available"
+        return info
+
     @app.get("/", tags=["Root"])
     async def root():
-        """API root endpoint"""
-        return {
-            "message": f"Welcome to {settings.app_name}",
-            "version": settings.app_version,
-            "docs": "/docs",
-            "health": "/health"
-        }
-    
-    # Register routers
+        return {"message": f"Welcome to {settings.app_name}",
+                "version": settings.app_version,
+                "docs": "/docs", "health": "/health"}
+
     app.include_router(vocabulary_router)
     app.include_router(translation_router)
-    app.include_router(speech_router)
     app.include_router(history_router)
     app.include_router(health_router)
     app.include_router(dictionary_router)
     app.include_router(evaluation_router)
-    
+    app.include_router(alphabet_router)
+    app.include_router(audio_router)
+    app.include_router(stt_router)
+
     return app
 
 
-# Create application instance
 app = create_application()
