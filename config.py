@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     mongodb_max_pool_size: int = Field(default=50)
     mongodb_min_pool_size: int = Field(default=10)
 
+    # STT (Speech-to-Text) Settings
+    # Model path: either a Whisper model size ("tiny", "small") or
+    # an absolute path to a fine-tuned CTranslate2 model directory
+    stt_enabled: bool = Field(default=True)
+    stt_model_path: str = Field(default="tiny")
+    stt_device: str = Field(default="cpu")
+    stt_compute_type: str = Field(default="int8")
+
     # LSTM Translation Settings (Phase 1: Infrastructure - DISABLED by default)
     # IMPORTANT: LSTM is used ONLY as final fallback when Hybrid algorithm fails
     # Architecture: Hybrid (Phrase→Dictionary→Fuzzy) → LSTM (if Hybrid fails)
