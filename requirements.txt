@@ -3,36 +3,17 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
-# Database
-motor==3.6.0
-pymongo==4.9.0
-
 # Data Validation
 pydantic==2.5.0
+pydantic-core==2.14.1
 pydantic-settings==2.1.0
 email-validator==2.1.0
 
 # Security
 python-dotenv==1.0.0
 
-# Speech Recognition
-openai-whisper
-numpy==1.24.3
-scipy==1.11.4
-wave==0.0.2
-ffmpeg-python
-
-# Machine Learning (for LSTM translation models)
-tensorflow==2.15.0
-keras==2.15.0
-
 # Translation Services
-googletrans==4.0.0rc1
-langdetect==1.0.9
-
-# Audio Processing
-pydub==0.25.1
-librosa==0.10.1
+deep-translator==1.11.4
 
 # HTTP & API
 httpx==0.25.2
@@ -41,25 +22,23 @@ requests==2.31.0
 # Logging & Monitoring
 python-json-logger==2.0.7
 
-# Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-httpx==0.25.2
+# ML — OPUS-MT CTranslate2 (int8, CPU-only, ~75 MB per model)
+ctranslate2==4.4.0
+transformers==4.40.2
+sentencepiece==0.2.0
 
-# Code Quality
-black==23.12.0
-flake8==6.1.0
-mypy==1.7.1
+# STT — Whisper inference (CTranslate2-based, fast CPU inference)
+faster-whisper==1.1.0
 
-# CORS
-python-cors==1.0.0
+# Audio processing
+pydub==0.25.1
+soundfile==0.12.1
 
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
 
 # MongoDB
-motor==3.3.2
-pymongo==4.6.1
-certifi==2023.11.17
+pymongo==4.10.1
+motor==3.6.0
+dnspython==2.6.1
