@@ -34,18 +34,10 @@ numpy==1.24.3
 # ML — Speech-to-Text (Whisper via faster-whisper)
 faster-whisper==1.1.0
 
-# STT — Whisper inference (CTranslate2-based, fast CPU inference)
-faster-whisper==1.1.0
-
-# Audio processing
-pydub==0.25.1
-soundfile==0.12.1
+# MongoDB — GridFS audio storage
+pymongo==4.9.2
+dnspython==2.6.1
 
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
-
-# MongoDB
-pymongo==4.10.1
-motor==3.6.0
-dnspython==2.6.1
