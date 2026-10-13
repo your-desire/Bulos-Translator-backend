@@ -1,0 +1,8 @@
+{
+  "direction": "tl_bul",
+  "total": 1228,
+  "train": 859,
+  "val": 184,
+  "test": 185,
+  "seed": 42
+}

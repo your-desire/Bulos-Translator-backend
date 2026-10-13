@@ -50,21 +50,15 @@ class Settings(BaseSettings):
     # Model path: either a Whisper model size ("tiny", "small") or
     # an absolute path to a fine-tuned CTranslate2 model directory
     stt_enabled: bool = Field(default=True)
-    stt_model_path: str = Field(default="tiny")
+    stt_model_path: str = Field(default="large-v3")
     stt_device: str = Field(default="cpu")
     stt_compute_type: str = Field(default="int8")
 
-    # LSTM Translation Settings (Phase 1: Infrastructure - DISABLED by default)
-    # IMPORTANT: LSTM is used ONLY as final fallback when Hybrid algorithm fails
-    # Architecture: Hybrid (Phrase→Dictionary→Fuzzy) → LSTM (if Hybrid fails)
-    lstm_enabled: bool = Field(default=False)
-    lstm_model_path: str = Field(default="")
-    lstm_source_vocab_path: str = Field(default="")
-    lstm_target_vocab_path: str = Field(default="")
-    lstm_source_language: str = Field(default="")
-    lstm_target_language: str = Field(default="")
-    lstm_max_sequence_length: int = Field(default=50)
-    lstm_confidence_threshold: float = Field(default=0.70)
+    # LSTM Translation Settings — Step 5 of the Bulos pipeline
+    # Requires models/lstm/<direction>/model.keras + src/tgt_tokenizer.json
+    # Run Bulos_LSTM_Training_Ready.ipynb to generate the model files.
+    lstm_enabled:    bool = Field(default=False)
+    lstm_models_dir: str  = Field(default="models/lstm")
 
     class Config:
         env_file = ".env"

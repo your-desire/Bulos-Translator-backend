@@ -88,6 +88,27 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Audio storage connection failed at startup: {e}")
 
+    # Load LSTM translation models (Step 5 — Bulos pairs only)
+    if settings.lstm_enabled:
+        try:
+            logger.info("Loading LSTM translation models (bul↔en, bul↔tl)...")
+            from services.translation import _get_lstm
+            lstm = _get_lstm()
+            if lstm is not None:
+                logger.info(
+                    f"LSTM models loaded — available: {lstm.available_directions}"
+                )
+            else:
+                logger.warning(
+                    "LSTM models not available — Bulos pipeline will stop at step 4. "
+                    "Run Bulos_LSTM_Training_Ready.ipynb to generate model files, "
+                    "then set lstm_enabled=true in .env."
+                )
+        except Exception as e:
+            logger.warning(f"LSTM model loading failed: {e}")
+    else:
+        logger.info("LSTM disabled (lstm_enabled=false) — Bulos pipeline runs steps 1–4 only")
+
     # Load STT model
     if settings.stt_enabled:
         try:

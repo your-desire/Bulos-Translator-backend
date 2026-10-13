@@ -167,9 +167,8 @@ models/translation/*.h5
 models/translation/*.pkl
 models/translation/*.keras
 
-# LSTM model files (replaced by OPUS-MT CTranslate2)
-models/lstm/
-services/lstm_translator.py
+# LSTM model files — .keras files excluded (Keras 3 format not compatible with TF 2.15)
+models/lstm/**/*.keras
 
 # Unused model files
 seq2seq_translation_model.keras
@@ -245,6 +244,16 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Internal Files
-/document
-/tests
+# Validation scripts and their output data
+scripts/validate_translation.py
+scripts/validate_transcription.py
+scripts/validate_fuzzy.py
+scripts/fix_notebook.py
+scripts/Bulos_Validation_Simple-1.xlsx
+scripts/audios/
+scripts/*.xlsx
+validation_results_*.xlsx
+translation_validation_*.xlsx
+transcription_validation_*.xlsx
+fuzzy_validation_*.xlsx
+trilingual_sample_*.xlsx
