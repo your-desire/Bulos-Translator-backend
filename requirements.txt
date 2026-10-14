@@ -27,9 +27,9 @@ ctranslate2==4.4.0
 transformers==4.40.2
 sentencepiece==0.2.0
 
-# ML — LSTM seq2seq (Step 5 for Bulos pairs; only active when lstm_enabled=true)
-tensorflow-cpu==2.15.0
-numpy==1.24.3
+# ML — LSTM seq2seq (disabled on Render free tier — OOM; kept for local training only)
+# tensorflow-cpu==2.15.0
+# numpy==1.24.3
 
 # ML — Speech-to-Text (Whisper via faster-whisper)
 faster-whisper==1.1.0

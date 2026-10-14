@@ -5,22 +5,26 @@ Routing:
   en ↔ tl  →  Google Translate (primary)
                CTranslate2 OPUS-MT (fallback when Google is blocked)
                Internal pipeline (last resort)
-  bul ↔ en / bul ↔ tl  →  5-step internal pipeline:
+  bul ↔ en / bul ↔ tl  →  4-step internal pipeline:
       Step 1 — Phrase matching    : exact full-text lookup in phrase_index
       Step 2 — Word matching      : greedy longest-match token-by-token
       Step 3 — Fuzzy matching     : Levenshtein, threshold 0.75
       Step 4 — Lenient fuzzy      : Levenshtein, threshold 0.70
-      Step 5 — LSTM seq2seq       : word-level neural translation on the
-                                    partially-translated text from step 4
+  en → bul  — if still partially untranslated after step 4, the partial
+               output is re-run through the tl→bul pipeline, since
+               Filipino is closer to Bulos than English is.
 
-For en ↔ tl pairs the pipeline is also run as a fallback so that even if
-Google AND OPUS-MT are both unavailable there is still a best-effort result.
+LSTM (step 5) is intentionally disabled — it causes OOM on Render free tier
+and does not meaningfully improve translation quality at current model size.
+
+Text normalisation preserves diacritics (e.g. ù, à, ē) because they are
+phonemically significant in the Bulos language.
+Numbers and purely numeric tokens are always passed through unchanged.
 """
 
 import asyncio
 import json
 import re
-import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -48,26 +52,6 @@ def _get_opus():
             logger.warning(f"OPUS translator unavailable: {e}")
             _opus_translator = False  # sentinel — don't retry
     return _opus_translator if _opus_translator is not False else None
-
-
-# ---------------------------------------------------------------------------
-# LSTM singleton — loaded lazily on first use (Bulos pairs only)
-# ---------------------------------------------------------------------------
-
-_lstm_translator = None
-
-
-def _get_lstm():
-    """Return the singleton LSTMTranslator, loading it once on first call."""
-    global _lstm_translator
-    if _lstm_translator is None:
-        try:
-            from services.lstm_translator import get_lstm_translator
-            _lstm_translator = get_lstm_translator()
-        except Exception as e:
-            logger.warning(f"LSTM translator unavailable: {e}")
-            _lstm_translator = False  # sentinel — don't retry
-    return _lstm_translator if _lstm_translator is not False else None
 
 
 # ---------------------------------------------------------------------------
@@ -217,7 +201,8 @@ class TranslationService:
     """
     Translates text.
     - en ↔ tl  : Google Translate → OPUS-MT fallback → internal pipeline
-    - bul ↔ *  : phrase → word → fuzzy(0.75) → lenient fuzzy(0.70) → LSTM
+    - bul ↔ *  : phrase → word → fuzzy(0.75) → lenient fuzzy(0.70)
+                  en→bul additionally retries via tl→bul if incomplete
     """
 
     SUPPORTED_PAIRS = [
@@ -231,7 +216,7 @@ class TranslationService:
         self.timeout = settings.translation_timeout_seconds
         logger.info(
             f"TranslationService initialised (timeout={self.timeout}s). "
-            "en↔tl → Google→OPUS-MT→pipeline | bul↔* → phrase→word→fuzzy→lenient-fuzzy→LSTM"
+            "en↔tl → Google→OPUS-MT→pipeline | bul↔* → phrase→word→fuzzy→lenient-fuzzy"
         )
 
     # -----------------------------------------------------------------------
@@ -328,12 +313,38 @@ class TranslationService:
     # -----------------------------------------------------------------------
 
     def _normalize_text(self, text: str) -> str:
-        norm = unicodedata.normalize("NFD", text)
-        norm = "".join(c for c in norm if unicodedata.category(c) != "Mn")
-        norm = norm.lower().strip()
+        """
+        Normalise text for dictionary lookup.
+        Diacritics are PRESERVED — they are phonemically significant in Bulos.
+        Only lowercases, collapses whitespace, and strips trailing punctuation.
+        """
+        norm = text.lower().strip()
         norm = re.sub(r"\s+", " ", norm)
         norm = norm.rstrip(".!?,;:")
         return norm
+
+    @staticmethod
+    def _is_numeric_token(token: str) -> bool:
+        """
+        Return True if the token is purely numeric (integer, decimal, ordinal,
+        year, time, etc.) and should be passed through unchanged.
+        Examples: "2024", "3.14", "42nd", "10:30", "100,000"
+        """
+        # Strip trailing punctuation for the check
+        clean = token.rstrip(".,;:!?")
+        # Pure digits
+        if clean.isdigit():
+            return True
+        # Decimal / comma-separated numbers: 3.14, 1,000
+        if re.match(r'^\d[\d.,]*\d$', clean):
+            return True
+        # Ordinals: 1st, 2nd, 3rd, 4th …
+        if re.match(r'^\d+(st|nd|rd|th)$', clean, re.IGNORECASE):
+            return True
+        # Time: 10:30, 3:05am
+        if re.match(r'^\d{1,2}:\d{2}(am|pm)?$', clean, re.IGNORECASE):
+            return True
+        return False
 
     def _build_translation_indexes(
         self,
@@ -472,6 +483,13 @@ class TranslationService:
         parts, matched, unmatched = [], 0, []
         i = 0
         while i < len(words_norm):
+            # Pass numeric tokens through unchanged — never translate numbers
+            if self._is_numeric_token(words_raw[i]):
+                parts.append(words_raw[i])
+                matched += 1
+                i += 1
+                continue
+
             # Skip proper nouns — keep them as-is
             if i in proper_noun_positions:
                 parts.append(words_raw[i])
@@ -540,6 +558,10 @@ class TranslationService:
 
             token = words_norm[pos]
 
+            # Skip numeric tokens — numbers pass through unchanged
+            if self._is_numeric_token(words_raw[pos] if pos < len(words_raw) else token):
+                continue
+
             # Skip short tokens
             if len(token) < FUZZY_MIN_LEN:
                 continue
@@ -587,61 +609,78 @@ class TranslationService:
                 "unmatched_positions": [p for p in unmatched
                                         if parts[p] == words_raw[p]]}
 
-    # ── bul pipeline: phrase → word → fuzzy(0.75) → lenient fuzzy(0.65) ──
+    # ── bul pipeline: phrase → word → fuzzy(0.75) → lenient fuzzy(0.70) ──
+    # For en→bul: if still partially untranslated, retry via tl→bul
+    #   (Filipino is linguistically closer to Bulos than English)
 
     async def _translate_bul_pipeline(
         self, text: str, src: str, tgt: str
     ) -> Dict[str, Any]:
         lang_pair = f"{src}_to_{tgt}"
 
-        # Step 1
+        # Step 1 — exact phrase match
         r = self._step1_phrase(text, lang_pair)
         if r:
             logger.info("[bul pipeline] exit Step 1")
             return r
 
-        # Step 2
+        # Step 2 — greedy word match
         s2 = self._step2_word(text, lang_pair)
         if s2["confidence"] == 1.0:
             logger.info("[bul pipeline] exit Step 2")
             return {k: s2[k] for k in ("translated_text", "confidence", "translation_method")}
 
-        # Step 3 — strict fuzzy
+        # Step 3 — strict fuzzy (threshold 0.75)
         s3 = self._fuzzy_pass(s2, lang_pair, FUZZY_THRESHOLD, "Step 3", source_lang=src)
         if s3["confidence"] == 1.0:
             logger.info("[bul pipeline] exit Step 3")
             return {k: s3[k] for k in ("translated_text", "confidence", "translation_method")}
 
-        # Step 4 — lenient fuzzy (raised threshold from 0.50 to 0.65)
+        # Step 4 — lenient fuzzy (threshold 0.70)
         logger.info("[bul pipeline] Step 4 — lenient fuzzy")
         s4 = self._fuzzy_pass(s3, lang_pair, FUZZY_THRESHOLD_LENIENT, "Step 4", source_lang=src)
         if s4["confidence"] == 1.0:
             logger.info("[bul pipeline] exit Step 4")
             return {k: s4[k] for k in ("translated_text", "confidence", "translation_method")}
 
-        # Step 5 — LSTM neural translation on the partially-translated text
-        logger.info("[bul pipeline] Step 5 — LSTM")
-        lstm = _get_lstm()
-        if lstm is not None and lstm.is_available(src, tgt):
-            try:
-                loop   = asyncio.get_event_loop()
-                best_so_far = s4["translated_text"]
-                result = await loop.run_in_executor(
-                    None,
-                    lambda: lstm.translate(best_so_far, src, tgt),
+        # Step 5 — en→bul retry via tl→bul
+        # When English→Bulos is still incomplete, translate the partial output
+        # through Filipino→Bulos since Filipino is closer to Bulos.
+        if src == "en" and tgt == "bul":
+            partial = s4["translated_text"]
+            logger.info(
+                f"[bul pipeline] Step 5 — en→bul incomplete, retrying partial "
+                f"output via tl→bul: '{partial}'"
+            )
+            tl_bul_pair = "tl_to_bul"
+
+            r5 = self._step1_phrase(partial, tl_bul_pair)
+            if r5:
+                r5["translation_method"] = "en_bul_via_tl"
+                return r5
+
+            s5b = self._step2_word(partial, tl_bul_pair)
+            if s5b["confidence"] == 1.0:
+                return {"translated_text": s5b["translated_text"],
+                        "confidence": s5b["confidence"],
+                        "translation_method": "en_bul_via_tl"}
+
+            s5c = self._fuzzy_pass(s5b, tl_bul_pair, FUZZY_THRESHOLD, "Step 5c", source_lang="tl")
+            if s5c["confidence"] == 1.0:
+                return {"translated_text": s5c["translated_text"],
+                        "confidence": s5c["confidence"],
+                        "translation_method": "en_bul_via_tl"}
+
+            s5d = self._fuzzy_pass(s5c, tl_bul_pair, FUZZY_THRESHOLD_LENIENT, "Step 5d", source_lang="tl")
+            # Return whichever result has higher confidence
+            if s5d["confidence"] >= s4["confidence"]:
+                logger.info(
+                    f"[bul pipeline] tl→bul retry improved confidence: "
+                    f"{s4['confidence']:.2f} → {s5d['confidence']:.2f}"
                 )
-                if result and result.strip():
-                    logger.info(f"[bul pipeline] LSTM: '{best_so_far}' → '{result}'")
-                    return {
-                        "translated_text":    result,
-                        "confidence":         1.0,
-                        "translation_method": "lstm",
-                    }
-                logger.warning("[bul pipeline] LSTM returned empty output")
-            except Exception as e:
-                logger.warning(f"[bul pipeline] LSTM failed: {e}")
-        else:
-            logger.info("[bul pipeline] LSTM not available — returning step 4 result")
+                return {"translated_text": s5d["translated_text"],
+                        "confidence": s5d["confidence"],
+                        "translation_method": "en_bul_via_tl_partial"}
 
         return {k: s4[k] for k in ("translated_text", "confidence", "translation_method")}
 
