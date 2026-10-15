@@ -610,8 +610,10 @@ class TranslationService:
                                         if parts[p] == words_raw[p]]}
 
     # ── bul pipeline: phrase → word → fuzzy(0.75) → lenient fuzzy(0.70) ──
-    # For en→bul: if still partially untranslated, retry via tl→bul
-    #   (Filipino is linguistically closer to Bulos than English)
+    # For en→bul: unresolved English tokens get a token-level Filipino bridge:
+    #   en→tl (exact dictionary only) → tl→bul (exact dictionary only)
+    #   If no tl→bul match exists, the Filipino word is kept as-is.
+    #   Already-translated Bulos tokens are NEVER re-processed.
 
     async def _translate_bul_pipeline(
         self, text: str, src: str, tgt: str
@@ -643,46 +645,97 @@ class TranslationService:
             logger.info("[bul pipeline] exit Step 4")
             return {k: s4[k] for k in ("translated_text", "confidence", "translation_method")}
 
-        # Step 5 — en→bul retry via tl→bul
-        # When English→Bulos is still incomplete, translate the partial output
-        # through Filipino→Bulos since Filipino is closer to Bulos.
+        # Step 5 — en→bul Filipino bridge (en→bul only, token-level, exact dicts only)
         if src == "en" and tgt == "bul":
-            partial = s4["translated_text"]
+            result = self._en_bul_filipino_fallback(s4)
             logger.info(
-                f"[bul pipeline] Step 5 — en→bul incomplete, retrying partial "
-                f"output via tl→bul: '{partial}'"
+                f"[bul pipeline] Step 5 (Filipino bridge): "
+                f"'{s4['translated_text']}' → '{result['translated_text']}'"
             )
-            tl_bul_pair = "tl_to_bul"
-
-            r5 = self._step1_phrase(partial, tl_bul_pair)
-            if r5:
-                r5["translation_method"] = "en_bul_via_tl"
-                return r5
-
-            s5b = self._step2_word(partial, tl_bul_pair)
-            if s5b["confidence"] == 1.0:
-                return {"translated_text": s5b["translated_text"],
-                        "confidence": s5b["confidence"],
-                        "translation_method": "en_bul_via_tl"}
-
-            s5c = self._fuzzy_pass(s5b, tl_bul_pair, FUZZY_THRESHOLD, "Step 5c", source_lang="tl")
-            if s5c["confidence"] == 1.0:
-                return {"translated_text": s5c["translated_text"],
-                        "confidence": s5c["confidence"],
-                        "translation_method": "en_bul_via_tl"}
-
-            s5d = self._fuzzy_pass(s5c, tl_bul_pair, FUZZY_THRESHOLD_LENIENT, "Step 5d", source_lang="tl")
-            # Return whichever result has higher confidence
-            if s5d["confidence"] >= s4["confidence"]:
-                logger.info(
-                    f"[bul pipeline] tl→bul retry improved confidence: "
-                    f"{s4['confidence']:.2f} → {s5d['confidence']:.2f}"
-                )
-                return {"translated_text": s5d["translated_text"],
-                        "confidence": s5d["confidence"],
-                        "translation_method": "en_bul_via_tl_partial"}
+            return result
 
         return {k: s4[k] for k in ("translated_text", "confidence", "translation_method")}
+
+    def _en_bul_filipino_fallback(self, s4_result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Token-level Filipino bridge for unresolved English→Bulos tokens.
+
+        For each token that step 4 left unresolved (still in its original
+        English form), this method:
+          1. Looks up the English token in the en→tl dictionary (exact only).
+          2. If a Filipino equivalent is found, looks it up in tl→bul (exact only).
+          3. If a Bulos equivalent is found → use it.
+          4. If only a Filipino equivalent is found and no Bulos match → keep
+             the Filipino word (do NOT fuzzy-convert it into a different Bulos word).
+          5. Already-translated Bulos tokens are never touched.
+
+        This prevents "the iron → the palansa → the malangsa" because
+        `palansa` (already Bulos) is not re-fed into the tl→bul fuzzy pipeline.
+        """
+        unmatched = s4_result.get("unmatched_positions", [])
+        if not unmatched:
+            return {k: s4_result[k]
+                    for k in ("translated_text", "confidence", "translation_method")}
+
+        parts      = list(s4_result["parts"])
+        words_raw  = s4_result["words_raw"]
+        words_norm = s4_result["words_norm"]
+        total      = len(words_norm)
+        newly      = 0
+
+        for pos in unmatched:
+            if pos >= len(words_norm):
+                continue
+
+            # Numbers always pass through unchanged
+            if self._is_numeric_token(words_raw[pos]):
+                continue
+
+            en_token = words_norm[pos]   # normalised English word
+
+            # 1. Exact en→tl dictionary lookup (no fuzzy)
+            tl_word = self._lookup_phrase(en_token, "en_to_tl")
+            if not tl_word:
+                # No Filipino equivalent — leave the English word as-is
+                logger.debug(
+                    f"[FilBridge] No en→tl match for '{en_token}' — keeping original"
+                )
+                continue
+
+            tl_norm = self._normalize_text(tl_word)
+
+            # 2. Exact tl→bul dictionary lookup (no fuzzy)
+            bul_word = self._lookup_phrase(tl_norm, "tl_to_bul")
+
+            if bul_word:
+                # Verified Bulos equivalent found via Filipino bridge
+                logger.debug(
+                    f"[FilBridge] '{en_token}' → tl:'{tl_word}' → bul:'{bul_word}'"
+                )
+                parts[pos] = bul_word
+            else:
+                # No Bulos match — keep the Filipino word, NOT a fuzzy guess
+                logger.debug(
+                    f"[FilBridge] '{en_token}' → tl:'{tl_word}' → no bul match, "
+                    f"keeping Filipino '{tl_word}'"
+                )
+                parts[pos] = tl_word
+
+            newly += 1
+
+        prev_matched  = int(round(s4_result["confidence"] * total))
+        total_matched = prev_matched + newly
+        confidence    = total_matched / total if total > 0 else 0.0
+
+        logger.info(
+            f"[FilBridge] resolved {newly}/{len(unmatched)} unmatched tokens, "
+            f"confidence={confidence:.2f}"
+        )
+        return {
+            "translated_text":    " ".join(parts),
+            "confidence":         confidence,
+            "translation_method": "en_bul_filipino_fallback",
+        }
 
     # ── en↔tl pipeline: Google → OPUS-MT → internal steps as last resort ──
 
