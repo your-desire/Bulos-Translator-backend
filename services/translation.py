@@ -1,19 +1,17 @@
-"""
+﻿"""
 Translation service.
 
 Routing:
-  en ↔ tl  →  Google Translate (primary)
+  en Γåö tl  ΓåÆ  Google Translate (primary)
                CTranslate2 OPUS-MT (fallback when Google is blocked)
-               Internal pipeline (last resort)
-  bul ↔ en / bul ↔ tl  →  5-step internal pipeline:
-      Step 1 — Phrase matching    : exact full-text lookup in phrase_index
-      Step 2 — Word matching      : greedy longest-match token-by-token
-      Step 3 — Fuzzy matching     : Levenshtein, threshold 0.75
-      Step 4 — Lenient fuzzy      : Levenshtein, threshold 0.70
-      Step 5 — LSTM seq2seq       : word-level neural translation on the
-                                    partially-translated text from step 4
+  bul Γåö en / bul Γåö tl  ΓåÆ  4-step internal pipeline:
+      Step 1 ΓÇö Phrase matching   : exact full-text lookup in phrase_index
+      Step 2 ΓÇö Word matching     : greedy longest-match token-by-token
+      Step 3 ΓÇö Fuzzy matching    : Levenshtein, threshold 0.75
+      Step 4 ΓÇö Lenient fuzzy     : Levenshtein, threshold 0.50 (bul pairs only)
+                                   (OPUS-MT has no Bulos support)
 
-For en ↔ tl pairs the pipeline is also run as a fallback so that even if
+For en Γåö tl pairs the pipeline is also run as a fallback so that even if
 Google AND OPUS-MT are both unavailable there is still a best-effort result.
 """
 
@@ -27,11 +25,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from config import settings
 from utils.fuzzy_match import levenshtein_similarity
 from utils.logging_config import get_logger
+from services.grammar_rules import get_grammar_engine, GrammarRulesEngine
 
 logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
-# OPUS-MT singleton — loaded lazily on first use
+# OPUS-MT singleton ΓÇö loaded lazily on first use
 # ---------------------------------------------------------------------------
 
 _opus_translator = None
@@ -46,178 +45,27 @@ def _get_opus():
             _opus_translator = get_opus_translator()
         except Exception as e:
             logger.warning(f"OPUS translator unavailable: {e}")
-            _opus_translator = False  # sentinel — don't retry
+            _opus_translator = False  # sentinel ΓÇö don't retry
     return _opus_translator if _opus_translator is not False else None
-
-
-# ---------------------------------------------------------------------------
-# LSTM singleton — loaded lazily on first use (Bulos pairs only)
-# ---------------------------------------------------------------------------
-
-_lstm_translator = None
-
-
-def _get_lstm():
-    """Return the singleton LSTMTranslator, loading it once on first call."""
-    global _lstm_translator
-    if _lstm_translator is None:
-        try:
-            from services.lstm_translator import get_lstm_translator
-            _lstm_translator = get_lstm_translator()
-        except Exception as e:
-            logger.warning(f"LSTM translator unavailable: {e}")
-            _lstm_translator = False  # sentinel — don't retry
-    return _lstm_translator if _lstm_translator is not False else None
 
 
 # ---------------------------------------------------------------------------
 # Fuzzy thresholds
 # ---------------------------------------------------------------------------
 
-FUZZY_THRESHOLD         = 0.75  # step 3 — strict
-FUZZY_THRESHOLD_LENIENT = 0.70  # step 4 — raised from 0.50 to prevent bad matches
+FUZZY_THRESHOLD         = 0.75  # step 3 ΓÇö strict
+FUZZY_THRESHOLD_LENIENT = 0.50  # step 4 bul ΓÇö lenient
 FUZZY_MIN_LEN           = 3     # skip tokens shorter than this
 
 # Google Translate language codes
 _GOOGLE_LANG = {"en": "en", "tl": "tl"}
 
-# ---------------------------------------------------------------------------
-# Proper noun / stopword detection
-# ---------------------------------------------------------------------------
-
-# Common English stopwords that should be kept as-is when unmatched
-_STOPWORDS_EN = frozenset({
-    "i", "me", "my", "myself", "we", "our", "ours", "ourselves",
-    "you", "your", "yours", "yourself", "yourselves",
-    "he", "him", "his", "himself", "she", "her", "hers", "herself",
-    "it", "its", "itself", "they", "them", "their", "theirs", "themselves",
-    "what", "which", "who", "whom", "this", "that", "these", "those",
-    "am", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "having", "do", "does", "did", "doing",
-    "a", "an", "the", "and", "but", "if", "or", "because", "as",
-    "until", "while", "of", "at", "by", "for", "with", "about",
-    "against", "between", "through", "during", "before", "after",
-    "above", "below", "to", "from", "up", "down", "in", "out",
-    "on", "off", "over", "under", "again", "further", "then", "once",
-    "here", "there", "when", "where", "why", "how", "all", "both",
-    "each", "few", "more", "most", "other", "some", "such", "no",
-    "nor", "not", "only", "own", "same", "so", "than", "too", "very",
-    "can", "will", "just", "don", "should", "now",
-})
-
-# Common Filipino stopwords
-_STOPWORDS_TL = frozenset({
-    "ang", "ng", "sa", "na", "at", "ay", "si", "ni", "mga",
-    "ko", "mo", "niya", "namin", "natin", "nila",
-    "ako", "ikaw", "ka", "siya", "kami", "tayo", "sila",
-    "ito", "iyan", "iyon", "dito", "diyan", "doon",
-    "ba", "po", "ho", "din", "rin", "pa", "lang", "lamang",
-    "pero", "kung", "kasi", "dahil", "para", "nang",
-    "may", "mayroon", "wala",
-})
-
-
-def _is_proper_noun(word: str, position: int, total_words: int) -> bool:
-    """
-    Detect if a word is likely a proper noun (name, place, etc.).
-    
-    A word is considered a proper noun if:
-    - It starts with an uppercase letter
-    - It is NOT the first word in the sentence (first word is always capitalized)
-    - It contains only letters (no numbers or special chars)
-    
-    Also treats ALL-CAPS words of 4+ chars as acronyms (keep as-is).
-    """
-    if not word or not word[0].isupper():
-        return False
-    
-    # ALL-CAPS words like "NASA", "LSTM" — keep as-is
-    if len(word) >= 2 and word.isupper() and word.isalpha():
-        return True
-    
-    # First word in sentence is always capitalized, so skip detection
-    if position == 0:
-        return False
-    
-    # Mixed case starting with uppercase + only letters = likely proper noun
-    if word[0].isupper() and word.isalpha():
-        return True
-    
-    return False
-
-
-def _is_stopword(word: str, source_lang: str) -> bool:
-    """Check if a word is a common stopword that should not be fuzzy-matched."""
-    lower = word.lower()
-    if source_lang in ("en",):
-        return lower in _STOPWORDS_EN
-    if source_lang in ("tl",):
-        return lower in _STOPWORDS_TL
-    return False
-
-
-# ---------------------------------------------------------------------------
-# Name-context detection — words that follow name-introducing patterns
-# ---------------------------------------------------------------------------
-
-# Patterns where the NEXT word(s) are a person's name and should be kept as-is.
-# Each pattern is a tuple of lowercase words that precede a name.
-_NAME_PATTERNS = [
-    # English
-    ("my", "name", "is"),
-    ("name", "is"),
-    ("i", "am"),
-    ("i'm",),
-    ("call", "me"),
-    ("called",),
-    # Filipino
-    ("ako", "si"),
-    ("si",),
-    ("pangalan", "ko", "ay"),
-    ("pangalan", "ko"),
-    ("ang", "pangalan", "ko", "ay"),
-    ("ang", "pangalan", "ko"),
-    # Bulos — add patterns here as needed
-]
-
-
-def _detect_name_positions(words_raw: list[str]) -> set[int]:
-    """
-    Detect positions of words that are likely personal names based on
-    surrounding context (e.g. "my name is ___", "ako si ___").
-    
-    Works regardless of capitalization.
-    
-    Returns:
-        Set of word indices that are likely names.
-    """
-    words_lower = [w.lower().rstrip(",.!?;:") for w in words_raw]
-    name_positions = set()
-    
-    for pattern in _NAME_PATTERNS:
-        plen = len(pattern)
-        for i in range(len(words_lower) - plen):
-            if tuple(words_lower[i : i + plen]) == pattern:
-                # All words AFTER the pattern until end-of-sentence or next
-                # stopword/known-word are treated as name tokens
-                for j in range(i + plen, len(words_lower)):
-                    # Stop at punctuation-only tokens
-                    if not words_lower[j].strip(",.!?;:"):
-                        break
-                    name_positions.add(j)
-                    logger.debug(
-                        f"[NameDetect] '{words_raw[j]}' at position {j} "
-                        f"detected as name (after pattern: {' '.join(pattern)})"
-                    )
-    
-    return name_positions
-
 
 class TranslationService:
     """
     Translates text.
-    - en ↔ tl  : Google Translate → OPUS-MT fallback → internal pipeline
-    - bul ↔ *  : phrase → word → fuzzy(0.75) → lenient fuzzy(0.70) → LSTM
+    - en Γåö tl  : Google Translate ΓåÆ OPUS-MT fallback ΓåÆ internal pipeline
+    - bul Γåö *  : phrase ΓåÆ word ΓåÆ fuzzy(0.75) ΓåÆ lenient fuzzy(0.50)
     """
 
     SUPPORTED_PAIRS = [
@@ -229,9 +77,10 @@ class TranslationService:
     def __init__(self):
         self.phrase_index: Dict[str, List[Tuple[str, str, int]]] = {}
         self.timeout = settings.translation_timeout_seconds
+        self.grammar_engine: Optional[GrammarRulesEngine] = None
         logger.info(
             f"TranslationService initialised (timeout={self.timeout}s). "
-            "en↔tl → Google→OPUS-MT→pipeline | bul↔* → phrase→word→fuzzy→lenient-fuzzy→LSTM"
+            "enΓåötl ΓåÆ GoogleΓåÆOPUS-MTΓåÆpipeline | bulΓåö* ΓåÆ phraseΓåÆwordΓåÆfuzzyΓåÆlenient-fuzzy"
         )
 
     # -----------------------------------------------------------------------
@@ -246,8 +95,12 @@ class TranslationService:
             sentence_data   = await self._load_sentence_data()
             all_vocabulary  = dictionary_data + alphabet_data
             self._build_translation_indexes(all_vocabulary, sentence_data)
+            
+            # Initialize grammar engine
+            self.grammar_engine = get_grammar_engine()
+            
             logger.info(
-                f"Translation service ready — "
+                f"Translation service ready ΓÇö "
                 f"{len(self.phrase_index)} phrase keys, "
                 f"{sum(len(v) for v in self.phrase_index.values())} total entries"
             )
@@ -271,7 +124,7 @@ class TranslationService:
                 bul = e.get("BULOS",    "").strip()
                 tl  = e.get("FILIPINO", "").strip()
                 en  = e.get("ENGLISH",  "").strip()
-                if bul and tl and en and bul != "—" and tl != "—":
+                if bul and tl and en and bul != "ΓÇö" and tl != "ΓÇö":
                     entries.append({"bul": bul, "tl": tl, "en": en})
         logger.info(f"Loaded {len(entries)} dictionary entries")
         return entries
@@ -291,7 +144,7 @@ class TranslationService:
                     tl  = (e.get("FILIPINO") or "").strip()
                     en  = (e.get("ENGLISH")  or "").strip()
                     key = f"{bul.lower()}|{tl.lower()}|{en.lower()}"
-                    if key in seen or not (bul and tl and en) or bul == "—" or tl == "—":
+                    if key in seen or not (bul and tl and en) or bul == "ΓÇö" or tl == "ΓÇö":
                         continue
                     entries.append({"bul": bul, "tl": tl, "en": en})
                     seen.add(key)
@@ -300,27 +153,19 @@ class TranslationService:
 
     async def _load_sentence_data(self) -> List[Dict[str, str]]:
         path = Path(__file__).parent.parent / "sentence.json"
-        logger.info(f"Looking for sentence.json at: {path} (exists={path.exists()})")
         if not path.exists():
-            logger.warning("sentence.json NOT FOUND — sentence translation will not work!")
+            logger.warning("sentence.json not found")
             return []
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        raw_entries = data.get("entries", [])
-        logger.info(f"sentence.json has {len(raw_entries)} raw entries")
         entries = []
-        skipped = 0
-        for e in raw_entries:
+        for e in data.get("entries", []):
             bul = (e.get("BULOS")    or "").strip()
             tl  = (e.get("FILIPINO") or "").strip()
             en  = (e.get("ENGLISH")  or "").strip()
             if bul and tl and en:
                 entries.append({"bul": bul, "tl": tl, "en": en})
-            else:
-                skipped += 1
-        logger.info(f"Loaded {len(entries)} sentence entries (skipped {skipped} incomplete)")
-        if entries:
-            logger.info(f"First sentence: bul='{entries[0]['bul']}' → tl='{entries[0]['tl']}'")
+        logger.info(f"Loaded {len(entries)} sentence entries")
         return entries
 
     # -----------------------------------------------------------------------
@@ -384,20 +229,21 @@ class TranslationService:
                 lambda: GoogleTranslator(source=gs, target=gt).translate(text),
             )
             if translated and translated.strip().lower() != text.strip().lower():
-                logger.info(f"[Google] '{text}' ({src}→{tgt}) → '{translated}'")
+                logger.info(f"[Google] '{text}' ({src}ΓåÆ{tgt}) ΓåÆ '{translated}'")
                 return {"translated_text": translated, "confidence": 1.0,
                         "translation_method": "google_translate"}
         except Exception as e:
-            logger.warning(f"[Google] Failed ({src}→{tgt}): {e}")
+            logger.warning(f"[Google] Failed ({src}ΓåÆ{tgt}): {e}")
         return {"translated_text": text, "confidence": 0.0,
                 "translation_method": "google_failed"}
 
     # -----------------------------------------------------------------------
-    # OPUS-MT helper  (en ↔ tl)
+    # OPUS-MT helper  (en Γåö tl)
     # -----------------------------------------------------------------------
 
     async def _translate_opus(
-        self, text: str, src: str, tgt: str    ) -> Dict[str, Any]:
+        self, text: str, src: str, tgt: str
+    ) -> Dict[str, Any]:
         opus = _get_opus()
         if opus is None or not opus.is_available(src, tgt):
             return {"translated_text": text, "confidence": 0.0,
@@ -409,16 +255,16 @@ class TranslationService:
                 lambda: opus.translate(text, src, tgt),
             )
             if result and result.strip():
-                logger.info(f"[OPUS] '{text}' ({src}→{tgt}) → '{result}'")
+                logger.info(f"[OPUS] '{text}' ({src}ΓåÆ{tgt}) ΓåÆ '{result}'")
                 return {"translated_text": result, "confidence": 1.0,
                         "translation_method": "opus_mt"}
         except Exception as e:
-            logger.warning(f"[OPUS] Failed ({src}→{tgt}): {e}")
+            logger.warning(f"[OPUS] Failed ({src}ΓåÆ{tgt}): {e}")
         return {"translated_text": text, "confidence": 0.0,
                 "translation_method": "opus_failed"}
 
     # -----------------------------------------------------------------------
-    # Internal pipeline steps (shared by all bul pairs + en↔tl fallback)
+    # Internal pipeline steps (shared by all bul pairs + enΓåötl fallback)
     # -----------------------------------------------------------------------
 
     def _lookup_phrase(self, norm_phrase: str, lang_pair: str) -> Optional[str]:
@@ -427,19 +273,16 @@ class TranslationService:
                 return translation
         return None
 
-    # Step 1 — exact phrase match
+    # Step 1 ΓÇö exact phrase match
     def _step1_phrase(self, text: str, lang_pair: str) -> Optional[Dict[str, Any]]:
-        normalized = self._normalize_text(text)
-        logger.info(f"[Step 1] Looking up: '{normalized}' (pair={lang_pair})")
-        t = self._lookup_phrase(normalized, lang_pair)
+        t = self._lookup_phrase(self._normalize_text(text), lang_pair)
         if t is not None:
-            logger.info(f"[Step 1] ✅ MATCH: '{text}' → '{t}'")
+            logger.debug(f"[Step 1] '{text}' ΓåÆ '{t}'")
             return {"translated_text": t, "confidence": 1.0,
                     "translation_method": "phrase_match"}
-        logger.info(f"[Step 1] ❌ No phrase match for '{normalized}'")
         return None
 
-    # Step 2 — greedy word match
+    # Step 2 ΓÇö greedy word match
     def _step2_word(self, text: str, lang_pair: str) -> Dict[str, Any]:
         words_raw  = text.split()
         words_norm = [self._normalize_text(w) for w in words_raw]
@@ -448,37 +291,11 @@ class TranslationService:
             return {"translated_text": text, "confidence": 0.0,
                     "translation_method": "word_match", "parts": [],
                     "words_raw": words_raw, "words_norm": words_norm,
-                    "unmatched_positions": [],
-                    "proper_noun_positions": []}
-
-        # Detect proper nouns BEFORE normalization
-        # SKIP when source is Bulos — Bulos words can be capitalized mid-sentence
-        src_lang = lang_pair.split("_to_")[0]
-        proper_noun_positions = set()
-        if src_lang != "bul":
-            for idx, raw_word in enumerate(words_raw):
-                # Strip trailing punctuation for detection
-                clean_word = re.sub(r'[,.!?;:]+$', '', raw_word)
-                if _is_proper_noun(clean_word, idx, len(words_raw)):
-                    proper_noun_positions.add(idx)
-                    logger.debug(f"[Step 2] Proper noun detected: '{raw_word}' at position {idx}")
-
-            # Detect names from context patterns (works even with lowercase)
-            name_positions = _detect_name_positions(words_raw)
-            proper_noun_positions.update(name_positions)
-        else:
-            logger.debug("[Step 2] Bulos source — skipping proper noun detection")
+                    "unmatched_positions": []}
 
         parts, matched, unmatched = [], 0, []
         i = 0
         while i < len(words_norm):
-            # Skip proper nouns — keep them as-is
-            if i in proper_noun_positions:
-                parts.append(words_raw[i])
-                matched += 1  # Count as "matched" so it doesn't go to fuzzy
-                i += 1
-                continue
-
             found_t, found_len = None, 0
             for length in range(len(words_norm) - i, 0, -1):
                 phrase = " ".join(words_norm[i : i + length])
@@ -499,26 +316,21 @@ class TranslationService:
         confidence = matched / total if total > 0 else 0.0
         method     = ("word_match" if confidence == 1.0
                       else "word_match_partial" if confidence > 0 else "no_match")
-        logger.info(f"[Step 2] confidence={confidence:.2f} ({matched}/{total}), "
-                    f"proper_nouns={len(proper_noun_positions)}")
+        logger.info(f"[Step 2] confidence={confidence:.2f} ({matched}/{total})")
         return {"translated_text": " ".join(parts), "confidence": confidence,
                 "translation_method": method, "parts": parts,
                 "words_raw": words_raw, "words_norm": words_norm,
-                "unmatched_positions": unmatched,
-                "proper_noun_positions": proper_noun_positions}
+                "unmatched_positions": unmatched}
 
-    # Step 3 / Step 4 — fuzzy match with configurable threshold
+    # Step 3 / Step 4-bul ΓÇö fuzzy match with configurable threshold
     def _fuzzy_pass(
         self,
         step2_result: Dict[str, Any],
         lang_pair:    str,
         threshold:    float,
         step_label:   str,
-        source_lang:  str = "",
     ) -> Dict[str, Any]:
         unmatched = step2_result.get("unmatched_positions", [])
-        proper_noun_positions = step2_result.get("proper_noun_positions", set())
-
         if not unmatched:
             return step2_result
 
@@ -533,20 +345,8 @@ class TranslationService:
         for pos in unmatched:
             if pos >= len(words_norm):
                 continue
-
-            # Skip proper nouns — should never be fuzzy matched
-            if pos in proper_noun_positions:
-                continue
-
             token = words_norm[pos]
-
-            # Skip short tokens
             if len(token) < FUZZY_MIN_LEN:
-                continue
-
-            # Skip stopwords — they should remain as-is, not fuzzy matched
-            if _is_stopword(token, source_lang):
-                logger.debug(f"[{step_label}] Skipping stopword: '{token}'")
                 continue
 
             best_key, best_score = None, 0.0
@@ -559,17 +359,11 @@ class TranslationService:
                 t = self._lookup_phrase(best_key, lang_pair)
                 if t:
                     logger.debug(
-                        f"[{step_label}] '{words_raw[pos]}' ≈ '{best_key}' "
-                        f"(score={best_score:.2f}) → '{t}'"
+                        f"[{step_label}] '{words_raw[pos]}' Γëê '{best_key}' "
+                        f"(score={best_score:.2f}) ΓåÆ '{t}'"
                     )
                     parts[pos] = t
                     newly += 1
-            else:
-                if best_key:
-                    logger.debug(
-                        f"[{step_label}] '{words_raw[pos]}' best match '{best_key}' "
-                        f"(score={best_score:.2f}) REJECTED — below threshold {threshold}"
-                    )
 
         total         = len(words_norm)
         prev_matched  = int(round(step2_result["confidence"] * total))
@@ -581,13 +375,13 @@ class TranslationService:
                     f"confidence={confidence:.2f}")
         return {"translated_text": " ".join(parts), "confidence": confidence,
                 "translation_method": method,
+                # pass along for potential next pass
                 "parts": parts, "words_raw": words_raw,
                 "words_norm": words_norm,
-                "proper_noun_positions": proper_noun_positions,
                 "unmatched_positions": [p for p in unmatched
                                         if parts[p] == words_raw[p]]}
 
-    # ── bul pipeline: phrase → word → fuzzy(0.75) → lenient fuzzy(0.65) ──
+    # ΓöÇΓöÇ bul pipeline: phrase ΓåÆ word ΓåÆ fuzzy(0.75) ΓåÆ lenient fuzzy(0.50) ΓöÇΓöÇ
 
     async def _translate_bul_pipeline(
         self, text: str, src: str, tgt: str
@@ -606,46 +400,18 @@ class TranslationService:
             logger.info("[bul pipeline] exit Step 2")
             return {k: s2[k] for k in ("translated_text", "confidence", "translation_method")}
 
-        # Step 3 — strict fuzzy
-        s3 = self._fuzzy_pass(s2, lang_pair, FUZZY_THRESHOLD, "Step 3", source_lang=src)
+        # Step 3 ΓÇö strict fuzzy
+        s3 = self._fuzzy_pass(s2, lang_pair, FUZZY_THRESHOLD, "Step 3")
         if s3["confidence"] == 1.0:
             logger.info("[bul pipeline] exit Step 3")
             return {k: s3[k] for k in ("translated_text", "confidence", "translation_method")}
 
-        # Step 4 — lenient fuzzy (raised threshold from 0.50 to 0.65)
-        logger.info("[bul pipeline] Step 4 — lenient fuzzy")
-        s4 = self._fuzzy_pass(s3, lang_pair, FUZZY_THRESHOLD_LENIENT, "Step 4", source_lang=src)
-        if s4["confidence"] == 1.0:
-            logger.info("[bul pipeline] exit Step 4")
-            return {k: s4[k] for k in ("translated_text", "confidence", "translation_method")}
-
-        # Step 5 — LSTM neural translation on the partially-translated text
-        logger.info("[bul pipeline] Step 5 — LSTM")
-        lstm = _get_lstm()
-        if lstm is not None and lstm.is_available(src, tgt):
-            try:
-                loop   = asyncio.get_event_loop()
-                best_so_far = s4["translated_text"]
-                result = await loop.run_in_executor(
-                    None,
-                    lambda: lstm.translate(best_so_far, src, tgt),
-                )
-                if result and result.strip():
-                    logger.info(f"[bul pipeline] LSTM: '{best_so_far}' → '{result}'")
-                    return {
-                        "translated_text":    result,
-                        "confidence":         1.0,
-                        "translation_method": "lstm",
-                    }
-                logger.warning("[bul pipeline] LSTM returned empty output")
-            except Exception as e:
-                logger.warning(f"[bul pipeline] LSTM failed: {e}")
-        else:
-            logger.info("[bul pipeline] LSTM not available — returning step 4 result")
-
+        # Step 4 ΓÇö lenient fuzzy (OPUS has no Bulos support)
+        logger.info("[bul pipeline] Step 4 ΓÇö lenient fuzzy")
+        s4 = self._fuzzy_pass(s3, lang_pair, FUZZY_THRESHOLD_LENIENT, "Step 4")
         return {k: s4[k] for k in ("translated_text", "confidence", "translation_method")}
 
-    # ── en↔tl pipeline: Google → OPUS-MT → internal steps as last resort ──
+    # ΓöÇΓöÇ enΓåötl pipeline: Google ΓåÆ OPUS-MT ΓåÆ internal steps as last resort ΓöÇΓöÇ
 
     async def _translate_en_tl_pipeline(
         self, text: str, src: str, tgt: str
@@ -663,7 +429,7 @@ class TranslationService:
         if gr["confidence"] > 0:
             return gr
 
-        logger.info(f"[en↔tl] Google unavailable — trying OPUS-MT ({src}→{tgt})")
+        logger.info(f"[enΓåötl] Google unavailable ΓÇö trying OPUS-MT ({src}ΓåÆ{tgt})")
 
         # Try OPUS-MT
         opus = _get_opus()
@@ -672,7 +438,7 @@ class TranslationService:
             if or_["confidence"] > 0:
                 return or_
 
-        logger.info("[en↔tl] OPUS-MT unavailable — falling back to internal pipeline")
+        logger.info("[enΓåötl] OPUS-MT unavailable ΓÇö falling back to internal pipeline")
 
         # Last resort: run the internal pipeline
         lang_pair = f"{src}_to_{tgt}"
@@ -682,11 +448,63 @@ class TranslationService:
         s2 = self._step2_word(text, lang_pair)
         if s2["confidence"] == 1.0:
             return {k: s2[k] for k in ("translated_text", "confidence", "translation_method")}
-        s3 = self._fuzzy_pass(s2, lang_pair, FUZZY_THRESHOLD, "Step 3", source_lang=src)
+        s3 = self._fuzzy_pass(s2, lang_pair, FUZZY_THRESHOLD, "Step 3")
         if s3["confidence"] == 1.0:
             return {k: s3[k] for k in ("translated_text", "confidence", "translation_method")}
-        s4 = self._fuzzy_pass(s3, lang_pair, FUZZY_THRESHOLD_LENIENT, "Step 4", source_lang=src)
+        s4 = self._fuzzy_pass(s3, lang_pair, FUZZY_THRESHOLD_LENIENT, "Step 4")
         return {k: s4[k] for k in ("translated_text", "confidence", "translation_method")}
+
+    # -----------------------------------------------------------------------
+    # Grammar validation helper
+    # -----------------------------------------------------------------------
+
+    def _validate_with_grammar(
+        self,
+        original: str,
+        translated: str,
+        source_lang: str,
+        target_lang: str,
+    ) -> Dict[str, Any]:
+        """
+        Validate a translation against grammar rules.
+        
+        Returns:
+            Dictionary with grammar_status and applied_rule fields
+        """
+        if not self.grammar_engine:
+            return {
+                "grammar_status": "no_engine",
+                "applied_rule": None
+            }
+        
+        # Grammar validation is only for Bulos translations
+        if target_lang != "bul":
+            return {
+                "grammar_status": "not_applicable",
+                "applied_rule": None
+            }
+        
+        # Check if any validation rules are available
+        validation_rules = self.grammar_engine.get_validation_rules()
+        if not validation_rules:
+            return {
+                "grammar_status": "no_rules",
+                "applied_rule": None
+            }
+        
+        # Perform validation
+        result = self.grammar_engine.validate_sentence(translated, source_lang="bul")
+        
+        if result.get("matched_rules"):
+            return {
+                "grammar_status": "verified",
+                "applied_rule": result["matched_rules"][0] if result["matched_rules"] else None
+            }
+        
+        return {
+            "grammar_status": "unverified",
+            "applied_rule": None
+        }
 
     # -----------------------------------------------------------------------
     # Public translate()
@@ -699,13 +517,13 @@ class TranslationService:
         target_language: str,
         user_id:         Optional[str] = None,
     ) -> Dict[str, Any]:
-        logger.info(f"Translate: '{text}' ({source_language}→{target_language})")
+        logger.info(f"Translate: '{text}' ({source_language}ΓåÆ{target_language})")
 
         if source_language not in ("en", "tl", "bul"):
             raise ValueError(f"Invalid source_language: {source_language}")
         if (source_language, target_language) not in self.SUPPORTED_PAIRS:
             raise ValueError(
-                f"Unsupported pair: {source_language}→{target_language}. "
+                f"Unsupported pair: {source_language}ΓåÆ{target_language}. "
                 f"Supported: {self.SUPPORTED_PAIRS}"
             )
         if source_language == target_language:
@@ -739,6 +557,11 @@ class TranslationService:
                 f"Translation exceeded timeout of {self.timeout} seconds"
             )
 
+        # Validate with grammar rules
+        grammar_info = self._validate_with_grammar(
+            text, result["translated_text"], source_language, target_language
+        )
+
         return {
             "original_text":      text,
             "translated_text":    result["translated_text"],
@@ -746,4 +569,6 @@ class TranslationService:
             "target_language":    target_language,
             "confidence":         result["confidence"],
             "translation_method": result.get("translation_method", "unknown"),
+            "grammar_status":     grammar_info["grammar_status"],
+            "applied_rule":       grammar_info["applied_rule"],
         }
