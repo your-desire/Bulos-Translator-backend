@@ -78,6 +78,7 @@ class TranslationService:
         self.phrase_index: Dict[str, List[Tuple[str, str, int]]] = {}
         self.timeout = settings.translation_timeout_seconds
         self.grammar_engine: Optional[GrammarRulesEngine] = None
+        self.pos_annotations: Optional[Dict] = None
         logger.info(
             f"TranslationService initialised (timeout={self.timeout}s). "
             "enΓåötl ΓåÆ GoogleΓåÆOPUS-MTΓåÆpipeline | bulΓåö* ΓåÆ phraseΓåÆwordΓåÆfuzzyΓåÆlenient-fuzzy"
@@ -96,8 +97,11 @@ class TranslationService:
             all_vocabulary  = dictionary_data + alphabet_data
             self._build_translation_indexes(all_vocabulary, sentence_data)
             
-            # Initialize grammar engine
-            self.grammar_engine = get_grammar_engine()
+            # Initialize grammar engine and load rules
+            await self._load_grammar_rules()
+            
+            # Load POS annotations
+            await self._load_pos_annotations()
             
             logger.info(
                 f"Translation service ready ΓÇö "
@@ -214,6 +218,54 @@ class TranslationService:
         logger.info(f"Built phrase index with {len(self.phrase_index)} unique keys")
 
     # -----------------------------------------------------------------------
+    # Grammar rules and POS annotations loading
+    # -----------------------------------------------------------------------
+
+    async def _load_grammar_rules(self) -> None:
+        """Load grammar rules from YAML file if available."""
+        rules_path = Path(__file__).parent.parent / "data" / "grammar_rules_template.yaml"
+        
+        if rules_path.exists():
+            try:
+                from services.grammar_rules import initialize_grammar_engine
+                self.grammar_engine = initialize_grammar_engine(rules_path)
+                stats = self.grammar_engine.get_statistics()
+                logger.info(
+                    f"Grammar rules loaded: {stats['total_rules']} total, "
+                    f"{stats['approved_rules']} approved, "
+                    f"{stats['validation_enabled']} validation-enabled"
+                )
+            except Exception as e:
+                logger.error(f"Failed to load grammar rules: {e}")
+                self.grammar_engine = get_grammar_engine()
+                logger.warning("Using empty grammar engine")
+        else:
+            self.grammar_engine = get_grammar_engine()
+            logger.info("No grammar rules file found (data/grammar_rules_template.yaml)")
+
+    async def _load_pos_annotations(self) -> None:
+        """Load POS annotations from JSON file if available."""
+        pos_path = Path(__file__).parent.parent / "data" / "pos_annotations.json"
+        
+        self.pos_annotations = None
+        
+        if pos_path.exists():
+            try:
+                with open(pos_path, 'r', encoding='utf-8') as f:
+                    self.pos_annotations = json.load(f)
+                
+                meta = self.pos_annotations.get('metadata', {})
+                logger.info(
+                    f"POS annotations loaded: {meta.get('total_words', 0)} words, "
+                    f"{meta.get('total_patterns', 0)} patterns"
+                )
+            except Exception as e:
+                logger.error(f"Failed to load POS annotations: {e}")
+                self.pos_annotations = None
+        else:
+            logger.info("No POS annotations file found (data/pos_annotations.json)")
+
+    # -----------------------------------------------------------------------
     # Google Translate helper
     # -----------------------------------------------------------------------
 
@@ -268,9 +320,65 @@ class TranslationService:
     # -----------------------------------------------------------------------
 
     def _lookup_phrase(self, norm_phrase: str, lang_pair: str) -> Optional[str]:
+        """
+        Enhanced phrase lookup with normalization and source-documented fallback.
+        
+        First tries exact match, then checks sentence annotations for documented phrases.
+        """
+        # Try exact match first
         for translation, pair, _ in self.phrase_index.get(norm_phrase, []):
             if pair == lang_pair:
                 return translation
+        
+        # If we have POS annotations, check for documented sentence matches
+        if self.pos_annotations and 'sentence_annotations' in self.pos_annotations:
+            return self._lookup_from_sentence_annotations(norm_phrase, lang_pair)
+        
+        return None
+    
+    def _lookup_from_sentence_annotations(
+        self,
+        norm_phrase: str,
+        lang_pair: str
+    ) -> Optional[str]:
+        """
+        Search sentence annotations for documented phrase translations.
+        
+        Uses corpus-grounded evidence from sentence.json.
+        """
+        sentences = self.pos_annotations.get('sentence_annotations', [])
+        
+        # Determine which fields to compare based on language pair
+        if lang_pair == "bul_to_en":
+            source_field, target_field = 'bulos', 'english'
+        elif lang_pair == "en_to_bul":
+            source_field, target_field = 'english', 'bulos'
+        elif lang_pair == "bul_to_tl":
+            source_field, target_field = 'bulos', 'filipino'
+        elif lang_pair == "tl_to_bul":
+            source_field, target_field = 'filipino', 'bulos'
+        elif lang_pair == "en_to_tl":
+            source_field, target_field = 'english', 'filipino'
+        elif lang_pair == "tl_to_en":
+            source_field, target_field = 'filipino', 'english'
+        else:
+            return None
+        
+        # Search for matching documented phrases
+        for sentence in sentences:
+            source_text = self._normalize_text(sentence.get(source_field, ''))
+            
+            if source_text == norm_phrase:
+                # Exact documented match found
+                target_text = sentence.get(target_field, '')
+                if target_text:
+                    logger.info(
+                        f"[Corpus match] Found documented translation: "
+                        f"'{norm_phrase}' → '{target_text}' "
+                        f"(source: {sentence.get('sentence_id', 'unknown')})"
+                    )
+                    return target_text
+        
         return None
 
     # Step 1 ΓÇö exact phrase match
