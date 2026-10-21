@@ -223,7 +223,7 @@ class TranslationService:
 
     async def _load_grammar_rules(self) -> None:
         """Load grammar rules from YAML file if available."""
-        rules_path = Path(__file__).parent.parent / "data" / "grammar_rules_template.yaml"
+        rules_path = Path(__file__).parent.parent / "data" / "grammar_rules.yaml"
         
         if rules_path.exists():
             try:
@@ -241,7 +241,7 @@ class TranslationService:
                 logger.warning("Using empty grammar engine")
         else:
             self.grammar_engine = get_grammar_engine()
-            logger.info("No grammar rules file found (data/grammar_rules_template.yaml)")
+            logger.info("No grammar rules file found (data/grammar_rules.yaml)")
 
     async def _load_pos_annotations(self) -> None:
         """Load POS annotations from JSON file if available."""
@@ -272,22 +272,74 @@ class TranslationService:
     async def _translate_google(
         self, text: str, src: str, tgt: str
     ) -> Dict[str, Any]:
+        """
+        Translate using Google Translate with rate limit handling.
+        
+        Implements:
+        - Single retry for temporary failures
+        - Respect for HTTP 429 rate limits
+        - Proper error categorization
+        - No credential exposure in logs
+        """
         gs, gt = _GOOGLE_LANG.get(src, src), _GOOGLE_LANG.get(tgt, tgt)
-        try:
-            from deep_translator import GoogleTranslator
-            loop       = asyncio.get_event_loop()
-            translated = await loop.run_in_executor(
-                None,
-                lambda: GoogleTranslator(source=gs, target=gt).translate(text),
-            )
-            if translated and translated.strip().lower() != text.strip().lower():
-                logger.info(f"[Google] '{text}' ({src}ΓåÆ{tgt}) ΓåÆ '{translated}'")
-                return {"translated_text": translated, "confidence": 1.0,
-                        "translation_method": "google_translate"}
-        except Exception as e:
-            logger.warning(f"[Google] Failed ({src}ΓåÆ{tgt}): {e}")
-        return {"translated_text": text, "confidence": 0.0,
-                "translation_method": "google_failed"}
+        
+        max_retries = 1
+        retry_delay = 2.0  # seconds
+        
+        for attempt in range(max_retries + 1):
+            try:
+                from deep_translator import GoogleTranslator
+                loop = asyncio.get_event_loop()
+                translated = await loop.run_in_executor(
+                    None,
+                    lambda: GoogleTranslator(source=gs, target=gt).translate(text),
+                )
+                if translated and translated.strip().lower() != text.strip().lower():
+                    logger.info(f"[Google] '{text}' ({src}→{tgt}) → '{translated}'")
+                    return {
+                        "translated_text": translated,
+                        "confidence": 1.0,
+                        "translation_method": "google_translate"
+                    }
+            except Exception as e:
+                error_msg = str(e).lower()
+                
+                # Detect rate limiting
+                if "too many requests" in error_msg or "rate limit" in error_msg:
+                    logger.warning(f"[Google] Rate limit hit ({src}→{tgt}), attempt {attempt + 1}/{max_retries + 1}")
+                    
+                    # Don't retry on rate limit - respect the limit
+                    return {
+                        "translated_text": text,
+                        "confidence": 0.0,
+                        "translation_method": "google_rate_limited"
+                    }
+                
+                # Detect temporary network errors
+                elif "timeout" in error_msg or "connection" in error_msg:
+                    logger.warning(f"[Google] Network error ({src}→{tgt}), attempt {attempt + 1}/{max_retries + 1}")
+                    
+                    if attempt < max_retries:
+                        await asyncio.sleep(retry_delay)
+                        continue
+                
+                # Other errors - log without exposing credentials
+                else:
+                    logger.warning(f"[Google] Translation failed ({src}→{tgt}): {type(e).__name__}")
+                
+                # Final attempt failed
+                if attempt == max_retries:
+                    return {
+                        "translated_text": text,
+                        "confidence": 0.0,
+                        "translation_method": "google_failed"
+                    }
+        
+        return {
+            "translated_text": text,
+            "confidence": 0.0,
+            "translation_method": "google_failed"
+        }
 
     # -----------------------------------------------------------------------
     # OPUS-MT helper  (en Γåö tl)
@@ -563,6 +615,199 @@ class TranslationService:
         return {k: s4[k] for k in ("translated_text", "confidence", "translation_method")}
 
     # -----------------------------------------------------------------------
+    # Controlled Filipino Pivot Fallback (Phase 2)
+    # -----------------------------------------------------------------------
+
+    async def _attempt_filipino_pivot(
+        self,
+        text: str,
+        source_language: str,
+        target_language: str,
+        direct_result: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Attempt controlled Filipino pivot translation when direct translation fails.
+        
+        Routes:
+        - English → Filipino → Bulos
+        - Bulos → Filipino → English
+        
+        Quality gates:
+        1. Only attempts when direct confidence < 0.5
+        2. Requires documented support for Bulos-related step
+        3. Rejects ambiguous intermediate results
+        4. Prevents recursive loops
+        5. Preserves phrase meaning and Bulos diacritics
+        
+        Args:
+            text: Original text to translate
+            source_language: Source language code (en or bul)
+            target_language: Target language code (bul or en)
+            direct_result: Result from direct translation attempt
+            
+        Returns:
+            Pivot result dictionary if successful, None if pivot should not be attempted
+        """
+        from config import settings
+        
+        # Gate 1: Check if pivot is enabled
+        if not settings.filipino_pivot_enabled:
+            logger.debug("[Pivot] Feature disabled")
+            return None
+        
+        # Gate 2: Only attempt pivot for en↔bul translations
+        valid_pairs = [("en", "bul"), ("bul", "en")]
+        if (source_language, target_language) not in valid_pairs:
+            logger.debug(f"[Pivot] Not applicable for {source_language}→{target_language}")
+            return None
+        
+        # Gate 3: Only attempt if direct translation is incomplete or unsupported
+        # Partial fuzzy/word matches are incomplete even if confidence >= 0.5
+        direct_confidence = direct_result.get("confidence", 0.0)
+        direct_method = direct_result.get("translation_method", "")
+        
+        is_complete_and_high_confidence = (
+            direct_confidence >= 0.5 and
+            not direct_method.endswith("_partial") and
+            direct_method not in ("no_match", "google_failed", "opus_failed", "google_rate_limited", "opus_unavailable")
+        )
+        
+        if is_complete_and_high_confidence:
+            logger.debug(f"[Pivot] Direct result sufficient (conf={direct_confidence:.2f}, method={direct_method})")
+            return None
+        
+        # Gate 4: Prevent recursive pivot attempts
+        if "pivot" in direct_method or "intermediate" in direct_method:
+            logger.warning("[Pivot] Preventing recursive pivot attempt")
+            return None
+        
+        logger.info(f"[Pivot] Attempting {source_language}→tl→{target_language} for: '{text}'")
+        
+        try:
+            # Set timeout for pivot attempt
+            pivot_timeout = settings.filipino_pivot_timeout_seconds
+            
+            # Step 1: Translate to Filipino
+            step1_coro = self._translate_to_filipino(text, source_language)
+            step1_result = await asyncio.wait_for(step1_coro, timeout=pivot_timeout // 2)
+            
+            # Gate 5: Validate step 1 quality
+            # For Bulos→Filipino: require phrase_match if strict mode, otherwise accept fuzzy_match
+            # For English→Filipino: accept Google/OPUS-MT results
+            step1_confidence = step1_result.get("confidence", 0.0)
+            step1_method = step1_result.get("translation_method", "")
+            
+            if step1_confidence < 0.5:
+                logger.info(f"[Pivot] Step 1 failed or low confidence: {step1_confidence:.2f}")
+                return None
+            
+            if source_language == "bul":
+                # Bulos→Filipino must be exact documented phrase/sentence match
+                # Fuzzy matching is NOT acceptable for Bulos sentence translations
+                if settings.filipino_pivot_require_phrase_match:
+                    if step1_method != "phrase_match":
+                        logger.info(f"[Pivot] Rejected: Bulos→Filipino must be phrase_match (got {step1_method})")
+                        return None
+            
+            filipino_text = step1_result.get("translated_text", "")
+            if not filipino_text or filipino_text.strip() == "":
+                logger.info("[Pivot] Step 1 produced empty result")
+                return None
+            
+            logger.info(f"[Pivot] Step 1: '{text}' → '{filipino_text}' (conf={step1_confidence:.2f}, method={step1_method})")
+            
+            # Step 2: Translate from Filipino to target
+            step2_coro = self._translate_from_filipino(filipino_text, target_language)
+            step2_result = await asyncio.wait_for(step2_coro, timeout=pivot_timeout // 2)
+            
+            if not step2_result:
+                logger.info("[Pivot] Step 2 failed")
+                return None
+            
+            # Gate 6: Validate step 2 quality
+            step2_confidence = step2_result.get("confidence", 0.0)
+            step2_method = step2_result.get("translation_method", "")
+            step2_text = step2_result.get("translated_text", "")
+            
+            if not step2_text or step2_text.strip() == "":
+                logger.info("[Pivot] Step 2 produced empty result")
+                return None
+            
+            if target_language == "bul":
+                # Filipino→Bulos must be exact documented phrase/sentence match
+                # Fuzzy matching is NOT acceptable for Bulos sentence translations
+                if settings.filipino_pivot_require_phrase_match:
+                    if step2_method != "phrase_match":
+                        logger.info(f"[Pivot] Rejected: Filipino→Bulos must be phrase_match (got {step2_method})")
+                        return None
+                
+                # Require reasonable confidence for Bulos
+                if step2_confidence < 0.5:
+                    logger.info(f"[Pivot] Rejected: Bulos confidence too low ({step2_confidence:.2f})")
+                    return None
+            
+            elif target_language == "en":
+                # Filipino→English: accept Google/OPUS-MT or documented
+                if step2_confidence < 0.5:
+                    logger.info(f"[Pivot] Rejected: English confidence too low ({step2_confidence:.2f})")
+                    return None
+            
+            logger.info(f"[Pivot] Step 2: '{filipino_text}' → '{step2_text}' (conf={step2_confidence:.2f}, method={step2_method})")
+            
+            # Success: Return pivot result with full metadata
+            final_confidence = min(step1_confidence, step2_confidence)
+            pivot_result = {
+                "translated_text": step2_text,
+                "confidence": final_confidence,
+                "translation_method": "filipino_pivot",
+                "intermediate_language": "tl",
+                "intermediate_translation": filipino_text,
+                "pivot_step1_confidence": step1_confidence,
+                "pivot_step1_method": step1_method,
+                "pivot_step2_confidence": step2_confidence,
+                "pivot_step2_method": step2_method,
+                "original_text": text,
+                "source_language": source_language,
+                "target_language": target_language,
+            }
+            
+            logger.info(f"[Pivot] SUCCESS: {source_language}→tl→{target_language} (final_conf={final_confidence:.2f})")
+            return pivot_result
+            
+        except asyncio.TimeoutError:
+            logger.warning(f"[Pivot] Timeout after {pivot_timeout}s")
+            return None
+        except Exception as e:
+            logger.error(f"[Pivot] Error: {e}", exc_info=True)
+            return None
+    
+    async def _translate_to_filipino(
+        self, text: str, source_language: str
+    ) -> Dict[str, Any]:
+        """Translate text to Filipino (step 1 of pivot)."""
+        if source_language == "en":
+            # English → Filipino (use Google/OPUS-MT)
+            return await self._translate_en_tl_pipeline(text, "en", "tl")
+        elif source_language == "bul":
+            # Bulos → Filipino (use internal pipeline)
+            return await self._translate_bul_pipeline(text, "bul", "tl")
+        else:
+            raise ValueError(f"Invalid source for pivot: {source_language}")
+    
+    async def _translate_from_filipino(
+        self, text: str, target_language: str
+    ) -> Dict[str, Any]:
+        """Translate from Filipino to target language (step 2 of pivot)."""
+        if target_language == "bul":
+            # Filipino → Bulos (use internal pipeline)
+            return await self._translate_bul_pipeline(text, "tl", "bul")
+        elif target_language == "en":
+            # Filipino → English (use Google/OPUS-MT)
+            return await self._translate_en_tl_pipeline(text, "tl", "en")
+        else:
+            raise ValueError(f"Invalid target for pivot: {target_language}")
+
+    # -----------------------------------------------------------------------
     # Grammar validation helper
     # -----------------------------------------------------------------------
 
@@ -604,14 +849,35 @@ class TranslationService:
         result = self.grammar_engine.validate_sentence(translated, source_lang="bul")
         
         if result.get("matched_rules"):
+            # Check evidence level - distinguish word-level from sentence-level validation
+            matched_patterns = result.get("matched_patterns", [])
+            
+            # Determine if any patterns have sentence-level evidence
+            has_sentence_level = any(
+                p.get("evidence_level") == "sentence" 
+                for p in matched_patterns
+            )
+            
+            # If only word-level evidence exists, mark as partially verified
+            if matched_patterns and not has_sentence_level:
+                # All matches are word-level only (e.g., question words without sentence structure)
+                return {
+                    "grammar_status": "word_recognized",
+                    "applied_rule": result["matched_rules"][0] if result["matched_rules"] else None,
+                    "evidence_level": "word"
+                }
+            
+            # Sentence-level evidence exists
             return {
                 "grammar_status": "verified",
-                "applied_rule": result["matched_rules"][0] if result["matched_rules"] else None
+                "applied_rule": result["matched_rules"][0] if result["matched_rules"] else None,
+                "evidence_level": "sentence"
             }
         
         return {
             "grammar_status": "unverified",
-            "applied_rule": None
+            "applied_rule": None,
+            "evidence_level": None
         }
 
     # -----------------------------------------------------------------------
@@ -658,6 +924,22 @@ class TranslationService:
                 coro = self._translate_bul_pipeline(text, source_language, target_language)
 
             result = await asyncio.wait_for(coro, timeout=self.timeout)
+            
+            # Attempt controlled Filipino pivot if direct translation is incomplete or unsupported
+            # Partial fuzzy/word matches are incomplete even if confidence >= 0.5
+            is_incomplete_or_unsupported = (
+                result.get("confidence", 0.0) < 0.5 or
+                result.get("translation_method", "").endswith("_partial") or
+                result.get("translation_method", "") in ("no_match", "google_failed", "opus_failed", "google_rate_limited", "opus_unavailable")
+            )
+            
+            if is_incomplete_or_unsupported:
+                pivot_result = await self._attempt_filipino_pivot(
+                    text, source_language, target_language, result
+                )
+                if pivot_result:
+                    result = pivot_result
+                    logger.info(f"[Pivot] Used pivot result (conf={result['confidence']:.2f})")
 
         except asyncio.TimeoutError:
             logger.error(f"Translation timeout ({self.timeout}s) for: '{text}'")
@@ -677,6 +959,9 @@ class TranslationService:
             "target_language":    target_language,
             "confidence":         result["confidence"],
             "translation_method": result.get("translation_method", "unknown"),
-            "grammar_status":     grammar_info["grammar_status"],
-            "applied_rule":       grammar_info["applied_rule"],
+            "grammar_status":          grammar_info["grammar_status"],
+            "applied_rule":            grammar_info["applied_rule"],
+            # Pivot metadata (if pivot was used)
+            "intermediate_language":   result.get("intermediate_language"),
+            "intermediate_translation": result.get("intermediate_translation"),
         }

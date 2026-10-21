@@ -56,17 +56,13 @@ class Settings(BaseSettings):
     stt_device: str = Field(default="cpu")
     stt_compute_type: str = Field(default="int8")
 
-    # LSTM Translation Settings (Phase 1: Infrastructure - DISABLED by default)
-    # IMPORTANT: LSTM is used ONLY as final fallback when Hybrid algorithm fails
-    # Architecture: Hybrid (Phrase→Dictionary→Fuzzy) → LSTM (if Hybrid fails)
-    lstm_enabled: bool = Field(default=False)
-    lstm_model_path: str = Field(default="")
-    lstm_source_vocab_path: str = Field(default="")
-    lstm_target_vocab_path: str = Field(default="")
-    lstm_source_language: str = Field(default="")
-    lstm_target_language: str = Field(default="")
-    lstm_max_sequence_length: int = Field(default=50)
-    lstm_confidence_threshold: float = Field(default=0.70)
+    # Filipino Pivot Translation (Day 5 - DISABLED by default)
+    # Uses Filipino as intermediate language when direct translation fails
+    # Architecture: Attempt direct first → If unusable, try source→tl→target
+    # Quality gates ensure only verified/approved translations accepted
+    filipino_pivot_enabled: bool = Field(default=False)
+    filipino_pivot_timeout_seconds: int = Field(default=45)  # Max time for pivot attempt
+    filipino_pivot_require_phrase_match: bool = Field(default=True)  # Strict: only accept phrase_match for Bulos stage
 
     class Config:
         env_file = ".env"

@@ -328,6 +328,7 @@ class GrammarRulesEngine:
                     'pattern_type': rule.rule_type.value,
                     'confidence': match_result['confidence'],
                     'evidence': match_result['evidence'],
+                    'evidence_level': match_result.get('evidence_level'),  # Capture evidence level
                     'markers_found': match_result.get('markers_found', []),
                 })
         
@@ -358,21 +359,26 @@ class GrammarRulesEngine:
         """
         Check if a sentence matches a specific grammar rule.
         
-        Returns match result with confidence and evidence.
+        Returns match result with confidence, evidence, and evidence_level.
+        
+        Evidence levels:
+        - "word": Only individual words/morphemes are documented (not complete sentence structures)
+        - "sentence": Complete sentence patterns are documented in the workbook
         """
         # Check by rule type
         if rule.rule_type == RuleType.MARKER and 'ay' in rule.required_markers:
-            # Topic marker 'ay' construction
+            # Topic marker 'ay' construction (38 documented sentence examples)
             if ' ay ' in sentence_lower:
                 return {
                     'matches': True,
                     'confidence': 0.85,
                     'evidence': 'topic_marker_ay_found',
+                    'evidence_level': 'sentence',
                     'markers_found': ['ay']
                 }
         
         if rule.rule_type == RuleType.ADJECTIVE and 'i' in rule.required_markers:
-            # Predicate adjective with 'i' marker
+            # Predicate adjective with 'i' marker (76 documented sentence examples)
             # Pattern: [Adjective] + i + [Noun]
             if ' i ' in sentence_lower:
                 # Check if there are known adjectives in the sentence
@@ -384,47 +390,54 @@ class GrammarRulesEngine:
                         'matches': True,
                         'confidence': 0.80,
                         'evidence': 'adjective_i_marker_pattern',
+                        'evidence_level': 'sentence',
                         'markers_found': ['i', 'adjective']
                     }
         
         if rule.rule_type == RuleType.POSSESSION:
-            # Possessive construction with 'ni' or 'de'
-            has_ni = ' ni ' in sentence_lower
-            has_de = ' de ' in sentence_lower
+            # Possessive construction with markers from rule definition (105 documented sentence examples)
+            possessive_markers = rule.required_markers if rule.required_markers else ['ni', 'de', 'na', 'ko', 'mu']
             
-            if has_ni or has_de:
-                marker = 'ni' if has_ni else 'de'
+            found_markers = []
+            for marker in possessive_markers:
+                if f' {marker} ' in sentence_lower:
+                    found_markers.append(marker)
+            
+            if found_markers:
                 return {
                     'matches': True,
                     'confidence': 0.90,
-                    'evidence': f'possessive_marker_{marker}_found',
-                    'markers_found': [marker]
+                    'evidence': f'possessive_marker_{found_markers[0]}_found',
+                    'evidence_level': 'sentence',
+                    'markers_found': found_markers
                 }
         
         if rule.rule_type == RuleType.QUESTION:
-            # Question formation with question words
-            question_words = ['ànu', 'anu', 'inú', 'inu', 'dênu', 'denu', 'kapide', 'pidê', 'pide']
+            # Question formation with question words from rule definition
+            # EVIDENCE LEVEL: WORD ONLY - 5 documented question words (Ànu, Dênu, kapide, Pidê, papalanu)
+            # NO complete interrogative sentence structures documented in SENTENCES sheet
+            question_words = rule.required_markers if rule.required_markers else ['ànu', 'anu', 'inú', 'inu', 'dênu', 'denu', 'kapide', 'pidê', 'pide', 'papalanu']
             
             for qword in question_words:
                 if qword in sentence_lower:
-                    # Check for question markers 'i' or 'ka' after question word
-                    has_marker = ' i ' in sentence_lower or ' ka ' in sentence_lower
-                    confidence = 0.90 if has_marker else 0.75
-                    
+                    # Recognize question word but DO NOT imply sentence structure is validated
+                    # Complete interrogative sentence patterns are not documented in workbook
                     return {
                         'matches': True,
-                        'confidence': confidence,
-                        'evidence': f'question_word_{qword}_found',
+                        'confidence': 0.60,  # Lower confidence reflects word-only evidence
+                        'evidence': f'question_word_{qword}_recognized',
+                        'evidence_level': 'word',  # CRITICAL: word-level only, not sentence-level
                         'markers_found': [qword]
                     }
         
         if rule.rule_type == RuleType.IMPERATIVE:
-            # Imperative with inclusive pronoun 'tam'
+            # Imperative with inclusive pronoun 'tam' (3 documented sentence examples)
             if ' tam ' in sentence_lower:
                 return {
                     'matches': True,
                     'confidence': 0.70,
                     'evidence': 'inclusive_imperative_tam_found',
+                    'evidence_level': 'sentence',
                     'markers_found': ['tam']
                 }
         
@@ -432,7 +445,8 @@ class GrammarRulesEngine:
         return {
             'matches': False,
             'confidence': 0.0,
-            'evidence': 'no_pattern_match'
+            'evidence': 'no_pattern_match',
+            'evidence_level': None
         }
     
     def can_generate_from_pattern(self, pattern_id: str) -> bool:

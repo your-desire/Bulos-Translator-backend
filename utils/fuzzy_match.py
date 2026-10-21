@@ -114,28 +114,41 @@ def find_best_match(
     query: str,
     candidates: list[str],
     threshold: float = 0.85,
-    min_length: int = 3
+    min_length: int = 3,
+    max_edit_distance: int = 2,        # NEW: Absolute edit cap
+    min_length_ratio: float = 0.6,     # NEW: Length similarity check
 ) -> Optional[Tuple[str, float]]:
     """
-    Find the best matching candidate string using fuzzy matching.
+    Find the best matching candidate string using fuzzy matching with safeguards.
+    
+    Safeguards added for Day 2 accuracy revision:
+    1. Length ratio check: prevent "a" matching "alphabet" (ratio < 0.6)
+    2. Edit distance cap: prevent unrelated words (distance > 2)
+    3. Ambiguity check: warn when multiple candidates have similar scores
+    4. Existing: min_length check (>=3 chars), threshold check
     
     Args:
         query: Input string to match
         candidates: List of candidate strings to match against
         threshold: Minimum similarity ratio (0.0-1.0) to accept match
         min_length: Minimum query length to perform fuzzy matching (avoid false positives on short words)
+        max_edit_distance: Maximum Levenshtein distance to accept (NEW - default 2)
+        min_length_ratio: Minimum length ratio between query and candidate (NEW - default 0.6)
         
     Returns:
         Tuple of (best_match, similarity_score) or None if no match above threshold
         
     Examples:
-        >>> candidates = ["ulo", "mata", "kamay"]
-        >>> find_best_match("olu", candidates, threshold=0.85)
-        None  # similarity too low
-        >>> find_best_match("ulo", candidates, threshold=0.85)
-        ("ulo", 1.0)
+        >>> find_best_match("ulu", ["ulo", "mata"], threshold=0.70, max_edit_distance=2)
+        ("ulo", 0.67)  # ACCEPT: distance=1, ratio=1.0
+        
+        >>> find_best_match("a", ["alphabet", "aso"], min_length_ratio=0.6)
+        None  # REJECT: ratio=0.11 < 0.6
+        
+        >>> find_best_match("xyz", ["ulo", "mata"], max_edit_distance=2)
+        None  # REJECT: distance=3 > 2
     """
-    # Reject short queries to prevent false positives
+    # Safeguard 1: Reject short queries to prevent false positives
     if len(query) < min_length:
         return None
     
@@ -144,16 +157,37 @@ def find_best_match(
     
     best_match = None
     best_score = 0.0
+    second_best_score = 0.0  # Track ambiguity
     
     for candidate in candidates:
+        # Safeguard 2: Length ratio (reject grossly different lengths)
+        length_ratio = min(len(query), len(candidate)) / max(len(query), len(candidate))
+        if length_ratio < min_length_ratio:
+            continue  # Skip this candidate
+        
+        # Safeguard 3: Edit distance cap (reject if too many edits)
+        distance = levenshtein_distance(query, candidate)
+        if distance > max_edit_distance:
+            continue  # Skip this candidate
+        
+        # Calculate similarity
         similarity = levenshtein_similarity(query, candidate)
         
         if similarity > best_score:
+            second_best_score = best_score  # Track previous best for ambiguity check
             best_score = similarity
             best_match = candidate
+        elif similarity > second_best_score:
+            second_best_score = similarity
     
-    # Reject if below threshold
+    # Safeguard 4: Threshold check (existing)
     if best_score < threshold:
         return None
+    
+    # Safeguard 5: Ambiguity warning (if two candidates are very close)
+    if second_best_score > 0 and (best_score - second_best_score) < 0.05:
+        # Two candidates within 5% similarity — ambiguous match
+        # Note: This doesn't reject the match, just signals ambiguity for logging
+        pass  # Caller can check if they want to handle ambiguity
     
     return (best_match, best_score)

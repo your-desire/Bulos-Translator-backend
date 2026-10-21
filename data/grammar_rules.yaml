@@ -1,0 +1,295 @@
+# Bulos Grammar Recognition Rules
+# Source: FINAL-Grammatical-Rules.xlsx
+# Date: 2026-10-21
+# 
+# All rules are approved for RECOGNITION only.
+# NO rules are approved for automatic sentence GENERATION.
+#
+# Evidence strength levels:
+# - VERY_STRONG: 100+ documented examples
+# - STRONG: 30+ documented examples
+# - MODERATE: 3-29 documented examples
+# - WEAK: 1-2 documented examples
+
+rules:
+  # =========================================================================
+  # RULE 1: QUESTION / INTERROGATIVE
+  # =========================================================================
+  - rule_id: question_interrogative
+    rule_type: question
+    name: "Question/Interrogative Pattern"
+    description: "Identifies Bulos question words in input text"
+    pattern: "question_word + [optional marker (i, ka)] + [predicate]"
+    
+    # Recognition examples (5 question words from WORDS sheet)
+    examples:
+      - bulos: "Ànu"
+        filipino: "ano"
+        english: "what"
+        source_reference: "WORDS sheet, Row 89"
+        notes: "Question word only - no complete sentence example"
+      
+      - bulos: "Dênu"
+        filipino: "saan"
+        english: "where"
+        source_reference: "WORDS sheet, Row 90"
+        notes: "Question word only - no complete sentence example"
+      
+      - bulos: "kapide"
+        filipino: "kailan"
+        english: "when"
+        source_reference: "WORDS sheet, Row 91"
+        notes: "Question word only - no complete sentence example"
+      
+      - bulos: "Pidê"
+        filipino: "magkano/ilan"
+        english: "how much/how many"
+        source_reference: "WORDS sheet, Row 92"
+        notes: "Question word only - no complete sentence example"
+      
+      - bulos: "papalanu"
+        filipino: "paano"
+        english: "how"
+        source_reference: "WORDS sheet, Row 93"
+        notes: "Question word only - no complete sentence example"
+    
+    # Approval status
+    status: not_approved
+    validated_by: null
+    validation_date: null
+    
+    # Usage permissions
+    allow_generation: false  # NO complete sentence examples
+    allow_validation: true   # Can identify question words
+    
+    # Linguistic metadata
+    required_markers:
+      - "ànu"
+      - "anu"
+      - "dênu"
+      - "denu"
+      - "kapide"
+      - "pidê"
+      - "pide"
+      - "papalanu"
+    word_order: null
+    substitutable_positions: []
+    
+    # Risk assessment
+    confidence_level: low
+    evidence_strength: moderate  # 5 words documented
+    known_limitations:
+      - "Only individual question words documented"
+      - "No complete interrogative sentence structures"
+      - "Cannot validate full question syntax"
+    
+    implementation_notes: "Recognition limited to identifying documented question words in input"
+
+  # =========================================================================
+  # RULE 2: TOPIC-COMMENT
+  # =========================================================================
+  - rule_id: topic_comment
+    rule_type: marker
+    name: "Topic-Comment Pattern"
+    description: "Recognizes topic-comment constructions with 'ay' marker"
+    pattern: "Topic + ay + Comment"
+    
+    # Example sentences (3 of 38)
+    examples:
+      - bulos: "Ikitam ay Magsolat"
+        filipino: "Magbasa at Sumulat Tayo"
+        english: "Let us Read and Write"
+        source_reference: "SENTENCES sheet, Row 3"
+      
+      - bulos: "I Surot a Dumaget Bulos ay te dalawampu't tiluwan (23) a tinog"
+        filipino: "Ang Wikang Dumaget Bulos ay may dalawampu't tatlong tunog"
+        english: "There are twenty-three (23) sounds in the Dumaget Bulos Language"
+        source_reference: "SENTENCES sheet, Row 6"
+      
+      - bulos: "I gebigkas de mga patenig a Surot a Dumaget Bulos ay tolad di de gebigkas"
+        filipino: "Ang pagbigkas sa mga patinig ng Wikang Bulos ay tulad din sa pagbigkas"
+        english: "All the vowels have the same sounds as those vowels in the Filipino alphabet"
+        source_reference: "SENTENCES sheet, Row 7"
+    
+    # Approval status
+    status: not_approved
+    validated_by: null
+    validation_date: null
+    
+    # Usage permissions
+    allow_generation: false
+    allow_validation: true
+    
+    # Linguistic metadata
+    required_markers:
+      - "ay"
+    word_order: "Topic + ay + Comment"
+    substitutable_positions: ["topic", "comment"]
+    
+    # Risk assessment
+    confidence_level: medium
+    evidence_strength: strong  # 38 documented sentences
+    known_limitations:
+      - "Native speaker validation required for generation"
+      - "Topic and comment boundaries not always clear"
+    
+    implementation_notes: "Matches sentences containing ' ay ' marker"
+
+  # =========================================================================
+  # RULE 3: POSSESSIVE
+  # =========================================================================
+  - rule_id: possessive
+    rule_type: possession
+    name: "Possessive Pattern"
+    description: "Recognizes possessive constructions with ni/de/na/ko/mu markers"
+    pattern: "Possessed + Possessive_Marker + Possessor"
+    
+    # Example sentences (3 of 105)
+    examples:
+      - bulos: "Panuntonan de Pagsolat ni Surot a Dumaget Bulos"
+        filipino: "Gabay sa Pagtuturo ng Wikang Dumaget Bulos"
+        english: "A Guide to Teaching the Dumaget Bulos Language"
+        source_reference: "SENTENCES sheet, Row 4"
+        notes: "Contains markers: ni, de"
+      
+      - bulos: "I Pamamaraan ni Pagsolat ni Surot a Dumaget Bulos"
+        filipino: "Ang Pamamaraan ng Pagsulat sa Wikang Dumaget Bulos"
+        english: "Introduction to Dumaget Bulos Orthography"
+        source_reference: "SENTENCES sheet, Row 5"
+        notes: "Contains marker: ni"
+      
+      - bulos: "I gebigkas de mga patenig a Surot a Dumaget Bulos"
+        filipino: "Ang pagbigkas sa mga patinig ng Wikang Bulos"
+        english: "The pronunciation of the vowels in Bulos language"
+        source_reference: "SENTENCES sheet, Row 7"
+        notes: "Contains marker: de"
+    
+    # Approval status
+    status: not_approved
+    validated_by: null
+    validation_date: null
+    
+    # Usage permissions
+    allow_generation: false
+    allow_validation: true
+    
+    # Linguistic metadata
+    required_markers:
+      - "ni"
+      - "de"
+      - "na"
+      - "ko"
+      - "mu"
+    word_order: "Possessed + marker + Possessor"
+    substitutable_positions: ["possessed", "possessor"]
+    
+    # Risk assessment
+    confidence_level: medium
+    evidence_strength: very_strong  # 105 documented sentences
+    known_limitations:
+      - "Different markers may have different usage contexts"
+      - "Native speaker validation required for generation"
+    
+    implementation_notes: "Matches sentences containing possessive markers (ni, de, na, ko, mu)"
+
+  # =========================================================================
+  # RULE 4: PREDICATE-ADJECTIVE
+  # =========================================================================
+  - rule_id: predicate_adjective
+    rule_type: adjective
+    name: "Predicate-Adjective Pattern"
+    description: "Recognizes predicate-adjective constructions with 'i' marker"
+    pattern: "Adjective + i + Noun"
+    
+    # Example sentences (3 of 76)
+    examples:
+      - bulos: "I Surot a Dumaget Bulos ay te dalawampu't tiluwan (23) a tinog"
+        filipino: "Ang Wikang Dumaget Bulos ay may dalawampu't tatlong tunog"
+        english: "There are twenty-three (23) sounds in the Dumaget Bulos Language"
+        source_reference: "SENTENCES sheet, Row 6"
+      
+      - bulos: "I tetik e de Surot a Dumaget Bulos ay te aduwa a tinug"
+        filipino: "Ang titik e sa Wikang Dumagat Bulos ay may dalawang tunog"
+        english: "Letter e has two sounds"
+        source_reference: "SENTENCES sheet, Row 17"
+      
+      - bulos: "I mga gemit a i at e"
+        filipino: "Ang mga gamit ng mga titik i at e"
+        english: "Uses of letters i and e"
+        source_reference: "SENTENCES sheet, Row 19"
+    
+    # Approval status
+    status: not_approved
+    validated_by: null
+    validation_date: null
+    
+    # Usage permissions
+    allow_generation: false
+    allow_validation: true
+    
+    # Linguistic metadata
+    required_markers:
+      - "i"
+    word_order: "Adjective + i + Noun"
+    substitutable_positions: ["adjective", "noun"]
+    
+    # Risk assessment
+    confidence_level: medium
+    evidence_strength: strong  # 76 documented sentences
+    known_limitations:
+      - "'i' is a common marker with multiple functions"
+      - "May overlap with other constructions"
+      - "Native speaker validation required for generation"
+    
+    implementation_notes: "Matches sentences containing ' i ' marker with known adjectives"
+
+  # =========================================================================
+  # RULE 5: IMPERATIVE
+  # =========================================================================
+  - rule_id: imperative
+    rule_type: imperative
+    name: "Imperative Pattern"
+    description: "Recognizes imperative/command constructions with 'tam' inclusive pronoun"
+    pattern: "Verb (command form) + [tam]"
+    
+    # Example sentences (all 3 documented)
+    examples:
+      - bulos: "Amitin tam un ikan"
+        filipino: "Kuhanin natin ang isda"
+        english: "Let us get the fish"
+        source_reference: "SENTENCES sheet, Row 156"
+      
+      - bulos: "Dian tam ni kolay un larawen"
+        filipino: "Lagyan natin ng kulay ang larawan"
+        english: "Let us color the picture"
+        source_reference: "SENTENCES sheet, Row 157"
+      
+      - bulos: "Biyen tam ni sinaing un manganak"
+        filipino: "Bigyan natin ng kanin ang mga bata"
+        english: "Let us give rice to the children"
+        source_reference: "SENTENCES sheet, Row 158"
+    
+    # Approval status
+    status: not_approved
+    validated_by: null
+    validation_date: null
+    
+    # Usage permissions
+    allow_generation: false
+    allow_validation: true
+    
+    # Linguistic metadata
+    required_markers:
+      - "tam"
+    word_order: "Verb + tam + [object]"
+    substitutable_positions: ["verb", "object"]
+    
+    # Risk assessment
+    confidence_level: low
+    evidence_strength: moderate  # Only 3 documented sentences
+    known_limitations:
+      - "Limited documentation (only 3 examples)"
+      - "Other imperative forms may exist without 'tam'"
+      - "Native speaker validation required for generation"
+    
+    implementation_notes: "Matches sentences containing ' tam ' inclusive pronoun marker"
